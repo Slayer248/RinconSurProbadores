@@ -1,17 +1,35 @@
 package com.rinconsur.probadores.utils
 
 import com.rinconsur.probadores.data.local.dao.ProbadorDao
+import com.rinconsur.probadores.data.local.dao.UsuarioDao
 import com.rinconsur.probadores.data.local.entities.ProbadorEntity
+import com.rinconsur.probadores.data.local.entities.UsuarioEntity
 
 object DataInitializer {
-    suspend fun inicializarProbadoresSiEstaVacio(probadorDao: ProbadorDao) {
+
+    suspend fun inicializarDatosSiEstaVacio(
+        usuarioDao: UsuarioDao,
+        probadorDao: ProbadorDao
+    ) {
+        // 1. Inicializar Administrador por defecto si no existe
+        val adminExiste = usuarioDao.obtenerUsuarioPorRut("admin")
+        if (adminExiste == null) {
+            val adminInicial = UsuarioEntity(
+                rut = "admin",
+                nombreCompleto = "Administrador Principal",
+                contrasena = "admin123",
+                rol = "ADMIN"
+            )
+            usuarioDao.insertarUsuario(adminInicial)
+        }
+
+        // 2. Inicializar Probadores si está vacío
         val cantidad = probadorDao.obtenerCantidadProbadores()
         if (cantidad == 0) {
             val probadoresIniciales = listOf(
                 ProbadorEntity(codigo = "P-01", estado = "LIBRE", esAccesible = false, desdeHora = "-"),
                 ProbadorEntity(codigo = "P-02", estado = "LIBRE", esAccesible = false, desdeHora = "-"),
                 ProbadorEntity(codigo = "P-03", estado = "LIBRE", esAccesible = false, desdeHora = "-")
-                // Se removió P-08 si solo deben existir 3 camarines
             )
             probadorDao.insertarProbadores(probadoresIniciales)
         }

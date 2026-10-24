@@ -3,8 +3,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/FirstFragment">
+    app:startDestination="@id/loginFragment">
 
+    <!-- 1. Pantalla Inicial: Login -->
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.rinconsur.probadores.ui.auth.LoginFragment"
+        android:label="Iniciar Sesión"
+        tools:layout="@layout/fragment_login">
+
+        <action
+            android:id="@+id/action_loginFragment_to_FirstFragment"
+            app:destination="@id/FirstFragment" />
+        <action
+            android:id="@+id/action_loginFragment_to_SecondFragment"
+            app:destination="@id/SecondFragment" />
+    </fragment>
+
+    <!-- 2. Vista Cliente -->
     <fragment
         android:id="@+id/FirstFragment"
         android:name="com.rinconsur.probadores.ui.cliente.FirstFragment"
@@ -16,6 +32,7 @@
             app:destination="@id/SecondFragment" />
     </fragment>
 
+    <!-- 3. Vista Asistente -->
     <fragment
         android:id="@+id/SecondFragment"
         android:name="com.rinconsur.probadores.ui.asistente.SecondFragment"

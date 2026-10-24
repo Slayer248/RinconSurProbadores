@@ -8,7 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.rinconsur.probadores.data.local.AppDatabase
 import com.rinconsur.probadores.data.local.entities.ProbadorEntity
 import com.rinconsur.probadores.data.local.entities.TurnoEntity
-import com.rinconsur.probadores.utils.DataInitializer
+import com.rinconsur.probadores.data.local.entities.UsuarioEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -17,30 +17,24 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
     private val db = AppDatabase.getDatabase(application)
     private val probadorDao = db.probadorDao()
     private val turnoDao = db.turnoDao()
+    private val usuarioDao = db.usuarioDao()
 
-    // Conversión segura de Flow a LiveData especificada en el hilo IO
+    // --- Flujos y LiveData existentes ---
     val probadoresLiveData: LiveData<List<ProbadorEntity>> =
         probadorDao.obtenerTodosProbadores().asLiveData(Dispatchers.IO)
 
     val turnosEnEsperaLiveData: LiveData<List<TurnoEntity>> =
         turnoDao.obtenerTurnosPorEstado("EN_ESPERA").asLiveData(Dispatchers.IO)
 
-    init {
-        // Inicialización diferida fuera del hilo principal
-        viewModelScope.launch(Dispatchers.IO) {
-            DataInitializer.inicializarProbadoresSiEstaVacio(probadorDao)
-        }
-    }
-
-    fun registrarTurno(prendas: Int, esPreferente: Boolean) {
+    fun registrarTurno(cantidadPrendas: Int, esPreferente: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             val nuevoTurno = TurnoEntity(
-                numeroTurno = "T-${System.currentTimeMillis().toString().takeLast(3)}",
+                numeroTurno = "T-${System.currentTimeMillis().toString().takeLast(4)}",
                 fechaHoraIngreso = System.currentTimeMillis(),
+                cantidadPrendas = cantidadPrendas,
                 esPreferente = esPreferente,
-                cantidadPrendas = prendas,
                 estado = "EN_ESPERA",
-                rutColaborador = "16.842.311-K"
+                rutColaborador = null
             )
             turnoDao.insertarTurno(nuevoTurno)
         }
@@ -48,23 +42,20 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun cambiarEstadoProbador(probador: ProbadorEntity, nuevoEstado: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val actualizado = probador.copy(
-                estado = nuevoEstado,
-                desdeHora = System.currentTimeMillis().toString()
-            )
+            val actualizado = probador.copy(estado = nuevoEstado)
             probadorDao.actualizarProbador(actualizado)
-
-            if (nuevoEstado == "LIBRE") {
-                atenderSiguienteFila()
-            }
         }
     }
 
-    private suspend fun atenderSiguienteFila() {
-        val siguienteTurno = turnoDao.obtenerSiguienteTurnoEnEspera()
-        siguienteTurno?.let { turno ->
-            val turnoAtendido = turno.copy(estado = "EN_PROBADOR")
-            turnoDao.actualizarTurno(turnoAtendido)
+    // --- NUEVO: Funciones para Autenticación de Usuarios ---
+    fun autenticar(rut: String, pass: String, onResultado: (UsuarioEntity?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val usuario = usuarioDao.obtenerUsuarioPorRut(rut)
+            if (usuario != null && usuario.contrasena == pass) {
+                onResultado(usuario)
+            } else {
+                onResultado(null)
+            }
         }
     }
 }

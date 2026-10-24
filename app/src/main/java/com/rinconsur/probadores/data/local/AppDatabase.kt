@@ -6,16 +6,19 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.rinconsur.probadores.data.local.dao.ProbadorDao
 import com.rinconsur.probadores.data.local.dao.TurnoDao
+import com.rinconsur.probadores.data.local.dao.UsuarioDao
 import com.rinconsur.probadores.data.local.entities.ProbadorEntity
 import com.rinconsur.probadores.data.local.entities.TurnoEntity
+import com.rinconsur.probadores.data.local.entities.UsuarioEntity
 
 @Database(
-    entities = [ProbadorEntity::class, TurnoEntity::class],
-    version = 3, // Incrementar versión a 3
+    entities = [UsuarioEntity::class, ProbadorEntity::class, TurnoEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
+    abstract fun usuarioDao(): UsuarioDao
     abstract fun probadorDao(): ProbadorDao
     abstract fun turnoDao(): TurnoDao
 

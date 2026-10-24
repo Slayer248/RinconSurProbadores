@@ -98,13 +98,13 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Estado de Probadores (P-01 a P-08)"
+        android:text="Estado de Probadores"
         android:textSize="16sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnSurface"
         android:layout_marginBottom="8dp" />
 
-    <!-- Grid de Probadores (HU-06) -->
+    <!-- Grid de Probadores con layout_weight para LinearLayout -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvProbadores"
         android:layout_width="match_parent"

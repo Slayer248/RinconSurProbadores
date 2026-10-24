@@ -4,12 +4,17 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
+import com.rinconsur.probadores.data.local.AppDatabase
 import com.rinconsur.probadores.databinding.ActivityMainBinding
+import com.rinconsur.probadores.utils.DataInitializer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,6 +37,15 @@ class MainActivity : AppCompatActivity() {
 
         appBarConfiguration = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfiguration)
+
+        // Inicialización de datos para Usuarios y Probadores
+        val db = AppDatabase.getDatabase(this)
+        lifecycleScope.launch(Dispatchers.IO) {
+            DataInitializer.inicializarDatosSiEstaVacio(
+                usuarioDao = db.usuarioDao(),
+                probadorDao = db.probadorDao()
+            )
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

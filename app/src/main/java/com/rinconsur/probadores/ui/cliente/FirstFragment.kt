@@ -2,12 +2,11 @@ package com.rinconsur.probadores.ui.cliente
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.navigation.fragment.findNavController
-import com.rinconsur.probadores.R
 import com.rinconsur.probadores.databinding.FragmentFirstBinding
 import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
 
@@ -16,7 +15,7 @@ class FirstFragment : Fragment() {
     private var _binding: FragmentFirstBinding? = null
     private val binding get() = _binding!!
 
-    // Usamos activityViewModels para mantener los datos en toda la app
+    // ViewModel compartido para mantener los datos sincronizados en tiempo real
     private val viewModel: AsistenteViewModel by activityViewModels()
 
     override fun onCreateView(
@@ -30,11 +29,20 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        observeViewModel()
+        // Indicar que se modificará el menú superior para ocultar opciones
+        setHasOptionsMenu(true)
 
-        binding.buttonFirst.setOnClickListener {
-            findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
-        }
+        // Ocultar botón de acceso al panel de operaciones para vistas de invitado/cliente
+        binding.buttonFirst.visibility = View.GONE
+
+        // Iniciar la escucha de datos desde Room/LiveData
+        observeViewModel()
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        super.onPrepareOptionsMenu(menu)
+        // Oculta el menú de tres puntos para el cliente/invitado
+        menu.clear()
     }
 
     private fun observeViewModel() {

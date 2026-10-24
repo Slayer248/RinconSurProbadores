@@ -12,5 +12,5 @@ data class TurnoEntity(
     val esPreferente: Boolean,
     val cantidadPrendas: Int,
     val estado: String,
-    val rutColaborador: String
+    val rutColaborador: String? = null
 )
