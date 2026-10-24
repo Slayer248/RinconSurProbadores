@@ -1,145 +1,220 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp"
+    android:fillViewport="true"
     tools:context=".ui.cliente.FirstFragment">
 
-    <!-- Título de la Pantalla -->
-    <TextView
-        android:id="@+id/tvTituloCliente"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Estado de Probadores"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="?attr/colorPrimary"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp" />
+        android:orientation="vertical"
+        android:padding="20dp">
 
-    <!-- Card: Probadores Libres -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardProbadores"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:layout_constraintTop_toBottomOf="@id/tvTituloCliente"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        <!-- Banner de Usuario Activo en Sesión -->
+        <TextView
+            android:id="@+id/tvUsuarioActual"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sesión: Carga..."
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorSecondary"
+            android:layout_gravity="center_horizontal" />
 
+        <TextView
+            android:id="@+id/tvTituloCliente"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Estado de Probadores"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Panel 1: Tiempo Estimado Destacado -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardTiempoGrandote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="?attr/colorPrimaryContainer">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TIEMPO ESTIMADO DE ESPERA"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05"
+                    android:textColor="?attr/colorOnPrimaryContainer" />
+
+                <TextView
+                    android:id="@+id/tvTiempoEspera"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="~ 0 min"
+                    android:textSize="48sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Indicadores Rápidos -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:gravity="center">
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Probadores Libres"
-                android:textSize="16sp"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                app:cardCornerRadius="12dp">
 
-            <TextView
-                android:id="@+id/tvProbadoresLibres"
-                android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Probadores Libres"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvProbadoresLibres"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="0"
-                android:textSize="48sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorPrimary" />
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="En Fila"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvPersonasFila"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorSecondary" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
 
-    <!-- Card: Personas en Fila -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardFila"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:layout_constraintTop_toBottomOf="@id/cardProbadores"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <LinearLayout
+        <!-- Panel 2: Formulario de Turno (Sin campo de Nombre) -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:gravity="center">
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Personas en Fila"
-                android:textSize="16sp"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <TextView
-                android:id="@+id/tvPersonasFila"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0"
-                android:textSize="48sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorSecondary" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pedir Mi Turno"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
 
-    <!-- Card: Tiempo de Espera Estimado -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardTiempo"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:layout_constraintTop_toBottomOf="@id/cardFila"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Cantidad de prendas (máx. 6)"
+                    android:layout_marginBottom="8dp">
 
-        <LinearLayout
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCantidadPrendas"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cbEsPreferente"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Atención preferencial"
+                    android:layout_marginBottom="12dp" />
+
+                <Button
+                    android:id="@+id/btnSolicitarTurno"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Solicitar Turno" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Panel 3: Lista de Gente en Espera -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gente en Espera"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvListaEspera"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:gravity="center">
+            android:nestedScrollingEnabled="false"
+            tools:listitem="@layout/item_turno_espera" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Tiempo de Espera Estimado"
-                android:textSize="16sp"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+        <Button
+            android:id="@+id/button_first"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/tvTiempoEspera"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="~ 0 min"
-                android:textSize="32sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- Botón de Navegación (Oculto por código con View.GONE) -->
-    <Button
-        android:id="@+id/button_first"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Siguiente"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

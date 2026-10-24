@@ -24,17 +24,18 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
         probadorDao.obtenerTodosProbadores().asLiveData(Dispatchers.IO)
 
     val turnosEnEsperaLiveData: LiveData<List<TurnoEntity>> =
-        turnoDao.obtenerTurnosPorEstado("EN_ESPERA").asLiveData(Dispatchers.IO)
-
-    fun registrarTurno(cantidadPrendas: Int, esPreferente: Boolean) {
+        turnoDao.obtenerTurnosEnEspera().asLiveData(Dispatchers.IO)
+    fun registrarTurno(nombreCliente: String, cantidadPrendas: Int, esPreferente: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
+            val ultimoNumero = turnoDao.obtenerUltimoNumero() ?: 1000
+            val nuevoNumeroTurno = "T-${ultimoNumero + 1}"
+
             val nuevoTurno = TurnoEntity(
-                numeroTurno = "T-${System.currentTimeMillis().toString().takeLast(4)}",
-                fechaHoraIngreso = System.currentTimeMillis(),
+                numeroTurno = nuevoNumeroTurno,
+                nombreCliente = nombreCliente,
                 cantidadPrendas = cantidadPrendas,
                 esPreferente = esPreferente,
-                estado = "EN_ESPERA",
-                rutColaborador = null
+                estado = "EN_ESPERA"
             )
             turnoDao.insertarTurno(nuevoTurno)
         }

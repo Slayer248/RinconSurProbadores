@@ -47,8 +47,14 @@ class LoginFragment : Fragment() {
                 }
 
                 Toast.makeText(requireContext(), "Bienvenido/a $usuarioInput", Toast.LENGTH_SHORT).show()
-                // Navegar a la pantalla de clientes (FirstFragment)
-                findNavController().navigate(R.id.action_loginFragment_to_FirstFragment)
+
+                // Crear el argumento para enviar a FirstFragment
+                val bundle = Bundle().apply {
+                    putString("USERNAME", usuarioInput)
+                }
+
+                // Navegar enviando el nombre ingresado
+                findNavController().navigate(R.id.action_loginFragment_to_FirstFragment, bundle)
 
             } else {
                 // Validación para Login Normal (Colaboradores / Admin)
@@ -59,7 +65,7 @@ class LoginFragment : Fragment() {
                     return@setOnClickListener
                 }
 
-                // Aquí va la lógica de validación de credenciales con AsistenteViewModel o UsuarioDao
+                // Lógica de validación de credenciales con AsistenteViewModel o UsuarioDao
             }
         }
     }

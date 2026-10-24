@@ -5,8 +5,10 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.rinconsur.probadores.databinding.FragmentFirstBinding
 import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
 
@@ -15,8 +17,8 @@ class FirstFragment : Fragment() {
     private var _binding: FragmentFirstBinding? = null
     private val binding get() = _binding!!
 
-    // ViewModel compartido para mantener los datos sincronizados en tiempo real
     private val viewModel: AsistenteViewModel by activityViewModels()
+    private val turnoAdapter = TurnoAdapter()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -29,36 +31,73 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Indicar que se modificará el menú superior para ocultar opciones
         setHasOptionsMenu(true)
+        setupRecyclerView()
 
-        // Ocultar botón de acceso al panel de operaciones para vistas de invitado/cliente
-        binding.buttonFirst.visibility = View.GONE
+        // Captura el nombre enviado desde el Login (ej: "Juan Pérez")
+        val nombreUsuarioSesion = arguments?.getString("USERNAME")
+            ?: arguments?.getString("nombreUsuario")
+            ?: "Cliente"
 
-        // Iniciar la escucha de datos desde Room/LiveData
+        // Despliega el nombre exacto de la sesión en el banner superior
+        binding.tvUsuarioActual.text = "Sesión: $nombreUsuarioSesion"
+
+        // Evento solicitar turno
+        binding.btnSolicitarTurno.setOnClickListener {
+            val prendasText = binding.etCantidadPrendas.text.toString().trim()
+
+            if (prendasText.isEmpty()) {
+                Toast.makeText(requireContext(), "Por favor ingresa la cantidad de prendas", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val prendas = prendasText.toIntOrNull() ?: 0
+            if (prendas <= 0 || prendas > 6) {
+                Toast.makeText(requireContext(), "La cantidad de prendas debe ser entre 1 y 6", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val esPreferente = binding.cbEsPreferente.isChecked
+
+            // Registra el turno utilizando automáticamente el nombre de la sesión
+            viewModel.registrarTurno(
+                nombreCliente = nombreUsuarioSesion,
+                cantidadPrendas = prendas,
+                esPreferente = esPreferente
+            )
+
+            binding.etCantidadPrendas.text?.clear()
+            binding.cbEsPreferente.isChecked = false
+            Toast.makeText(requireContext(), "¡Turno registrado para $nombreUsuarioSesion!", Toast.LENGTH_LONG).show()
+        }
+
         observeViewModel()
+    }
+
+    private fun setupRecyclerView() {
+        binding.rvListaEspera.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvListaEspera.adapter = turnoAdapter
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
         super.onPrepareOptionsMenu(menu)
-        // Oculta el menú de tres puntos para el cliente/invitado
         menu.clear()
     }
 
     private fun observeViewModel() {
-        // Escuchar cambios en probadores libres
         viewModel.probadoresLiveData.observe(viewLifecycleOwner) { listaProbadores ->
             val libres = listaProbadores.count { it.estado == "LIBRE" }
             binding.tvProbadoresLibres.text = libres.toString()
         }
 
-        // Escuchar personas en fila y actualizar tiempo estimado
         viewModel.turnosEnEsperaLiveData.observe(viewLifecycleOwner) { listaEnEspera ->
             val enFila = listaEnEspera.size
             binding.tvPersonasFila.text = enFila.toString()
 
             val tiempoEstimado = if (enFila == 0) 0 else enFila * 2
             binding.tvTiempoEspera.text = "~ $tiempoEstimado min"
+
+            turnoAdapter.submitList(listaEnEspera)
         }
     }
 
