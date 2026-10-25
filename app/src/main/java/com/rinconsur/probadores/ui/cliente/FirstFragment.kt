@@ -1,6 +1,7 @@
 package com.rinconsur.probadores.ui.cliente
 
 import android.os.Bundle
+import android.text.InputFilter
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
@@ -42,6 +43,17 @@ class FirstFragment : Fragment() {
         // Despliega el nombre exacto de la sesión en el banner superior
         binding.tvUsuarioActual.text = "Sesión: $nombreUsuarioSesion"
 
+        // Filtro para asegurar que solo se permitan letras y espacios si existe un campo de texto para el cliente
+        val filtroSoloLetras = InputFilter { source, start, end, _, _, _ ->
+            for (i in start until end) {
+                val c = source[i]
+                if (!Character.isLetter(c) && !Character.isWhitespace(c)) {
+                    return@InputFilter ""
+                }
+            }
+            null
+        }
+
         // Evento solicitar turno
         binding.btnSolicitarTurno.setOnClickListener {
             val prendasText = binding.etCantidadPrendas.text.toString().trim()
@@ -52,7 +64,7 @@ class FirstFragment : Fragment() {
             }
 
             val prendas = prendasText.toIntOrNull() ?: 0
-            if (prendas <= 0 || prendas > 6) {
+            if (prendas < 1 || prendas > 6) {
                 Toast.makeText(requireContext(), "La cantidad de prendas debe ser entre 1 y 6", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -77,6 +89,7 @@ class FirstFragment : Fragment() {
     private fun setupRecyclerView() {
         binding.rvListaEspera.layoutManager = LinearLayoutManager(requireContext())
         binding.rvListaEspera.adapter = turnoAdapter
+        binding.rvListaEspera.isNestedScrollingEnabled = false
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {

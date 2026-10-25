@@ -30,12 +30,10 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
 
-        // Obtención segura del NavHostFragment
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment_content_main) as NavHostFragment
         navController = navHostFragment.navController
 
-        // Configuramos loginFragment y AdminFragment como destinos principales para ocultar la flecha
         appBarConfiguration = AppBarConfiguration(
             setOf(
                 R.id.loginFragment,
@@ -44,7 +42,18 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
 
-        // Inicialización de datos para Usuarios y Probadores
+        // Ocultar el menú de la Toolbar si estamos en el Login o en Vista Cliente
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
+                R.id.loginFragment, R.id.FirstFragment -> {
+                    binding.toolbar.menu.clear() // Oculta el menú de la barra
+                }
+                else -> {
+                    invalidateOptionsMenu() // Redibuja el menú en Asistente y Admin
+                }
+            }
+        }
+
         val db = AppDatabase.getDatabase(this)
         lifecycleScope.launch(Dispatchers.IO) {
             DataInitializer.inicializarDatosSiEstaVacio(
@@ -55,19 +64,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)
+        // Solo infla el menú si la pantalla actual es Admin o Asistente
+        val actualId = navController.currentDestination?.id
+        if (actualId == R.id.SecondFragment || actualId == R.id.AdminFragment) {
+            menuInflater.inflate(R.menu.menu_main, menu)
+        }
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_settings -> true
+            R.id.action_logout -> {
+                // Limpia el historial y redirige al Login
+                navController.popBackStack(R.id.loginFragment, false)
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        return navController.navigateUp(appBarConfiguration)
-                || super.onSupportNavigateUp()
+        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 }

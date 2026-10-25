@@ -1,6 +1,7 @@
 package com.rinconsur.probadores.ui.auth
 
 import android.os.Bundle
+import android.text.InputFilter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +19,6 @@ class LoginFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: AsistenteViewModel by activityViewModels()
-    private var esModoInvitado = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -31,68 +31,78 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnIngresarInvitado.setOnClickListener {
-            esModoInvitado = !esModoInvitado
-            actualizarInterfaz()
+        // Filtro: Solo permite ingresar letras y espacios en tiempo real
+        val filtroSoloLetras = InputFilter { source, start, end, _, _, _ ->
+            for (i in start until end) {
+                val c = source[i]
+                if (!Character.isLetter(c) && !Character.isWhitespace(c)) {
+                    return@InputFilter ""
+                }
+            }
+            null
         }
 
-        binding.btnIniciarSesion.setOnClickListener {
-            val usuarioInput = binding.etRut.text.toString().trim()
+        // Aplicar el filtro al campo de invitado
+        binding.etNombreInvitado?.filters = arrayOf(filtroSoloLetras)
 
-            if (esModoInvitado) {
-                if (usuarioInput.isEmpty()) {
-                    Toast.makeText(requireContext(), "Por favor ingresa un nombre para continuar", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
+        // 1. Botón Ingresar como Invitado
+        binding.btnIngresarInvitado?.setOnClickListener {
+            val nombreInvitado = binding.etNombreInvitado?.text.toString().trim()
 
-                Toast.makeText(requireContext(), "Bienvenido/a $usuarioInput", Toast.LENGTH_SHORT).show()
-                val bundle = Bundle().apply { putString("USERNAME", usuarioInput) }
-                findNavController().navigate(R.id.action_loginFragment_to_FirstFragment, bundle)
+            if (nombreInvitado.isEmpty()) {
+                Toast.makeText(requireContext(), "Ingresa tu nombre para continuar", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-            } else {
-                val passInput = binding.etContrasena.text.toString().trim()
+            // Validación: Mínimo 5 letras
+            if (nombreInvitado.length < 3) {
+                Toast.makeText(requireContext(), "El nombre de invitado debe tener mínimo 3 letras", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener // Bloquea el avance si tiene menos de 3 letras
+            }
 
-                if (usuarioInput.isEmpty() || passInput.isEmpty()) {
-                    Toast.makeText(requireContext(), "Por favor completa todos los campos", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
+            val bundle = Bundle().apply {
+                putString("USERNAME", nombreInvitado)
+            }
+            findNavController().navigate(R.id.action_loginFragment_to_FirstFragment, bundle)
+        }
 
-                viewModel.autenticar(usuarioInput, passInput) { rol ->
-                    activity?.runOnUiThread {
-                        when (rol) {
-                            "ADMIN" -> {
-                                Toast.makeText(requireContext(), "Bienvenido Administrador", Toast.LENGTH_SHORT).show()
-                                findNavController().navigate(R.id.action_loginFragment_to_AdminFragment)
-                            }
-                            "ASISTENTE" -> {
-                                Toast.makeText(requireContext(), "Bienvenido Asistente", Toast.LENGTH_SHORT).show()
-                                val bundle = Bundle().apply { putString("USERNAME", usuarioInput) }
-                                findNavController().navigate(R.id.action_loginFragment_to_SecondFragment, bundle)
-                            }
-                            else -> {
-                                Toast.makeText(requireContext(), "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
-                            }
+        // 2. Botón Iniciar Sesión (Asistente / Admin)
+        binding.btnIniciarSesion?.setOnClickListener {
+            val user = binding.etUsername?.text.toString().trim()
+            val pass = binding.etPassword?.text.toString().trim()
+
+            if (user.isEmpty() || pass.isEmpty()) {
+                Toast.makeText(requireContext(), "Completa todos los campos", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (user.length < 3) {
+                Toast.makeText(requireContext(), "El usuario debe tener mínimo 3 letras", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (pass.length < 8) {
+                Toast.makeText(requireContext(), "La contraseña debe tener mínimo 8 caracteres", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            viewModel.autenticar(user, pass) { rol ->
+                activity?.runOnUiThread {
+                    when (rol) {
+                        "ADMIN" -> {
+                            val bundle = Bundle().apply { putString("USERNAME", user) }
+                            findNavController().navigate(R.id.action_loginFragment_to_AdminFragment, bundle)
+                        }
+                        "ASISTENTE" -> {
+                            val bundle = Bundle().apply { putString("USERNAME", user) }
+                            findNavController().navigate(R.id.action_loginFragment_to_SecondFragment, bundle)
+                        }
+                        else -> {
+                            Toast.makeText(requireContext(), "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             }
-        }
-    }
-
-    private fun actualizarInterfaz() {
-        if (esModoInvitado) {
-            binding.tilContrasena.visibility = View.GONE
-            binding.tilRut.hint = "Nombre de Invitado"
-            binding.btnIniciarSesion.text = "Ingresar a Probadores"
-            binding.btnIngresarInvitado.text = "Volver a Inicio de Sesión"
-            binding.etRut.text?.clear()
-        } else {
-            binding.tilContrasena.visibility = View.VISIBLE
-            binding.tilRut.hint = "Nombre de Usuario"
-            binding.btnIniciarSesion.text = "Iniciar Sesión"
-            binding.btnIngresarInvitado.text = "Ingresar como Cliente Invitado"
-            binding.etRut.text?.clear()
-            binding.etContrasena.text?.clear()
         }
     }
 
