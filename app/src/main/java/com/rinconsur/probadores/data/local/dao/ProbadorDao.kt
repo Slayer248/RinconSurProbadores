@@ -15,7 +15,7 @@ interface ProbadorDao {
     suspend fun insertarProbadores(probadores: List<ProbadorEntity>)
 
     @Update
-    suspend fun actualizarProbador(probador: ProbadorEntity)
+    suspend fun actualizarProbador(probador: ProbadorEntity) // Libre, Ocupado, Limpieza
 
     @Query("SELECT * FROM probador")
     fun obtenerTodosProbadores(): Flow<List<ProbadorEntity>>

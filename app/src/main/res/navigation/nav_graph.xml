@@ -21,30 +21,33 @@
         <action
             android:id="@+id/action_loginFragment_to_AdminFragment"
             app:destination="@id/AdminFragment" />
+
     </fragment>
 
     <!-- 2. Cliente (FirstFragment) -->
     <fragment
         android:id="@+id/FirstFragment"
         android:name="com.rinconsur.probadores.ui.cliente.FirstFragment"
-        android:label="@string/first_fragment_label"
+        android:label="Vista Cliente"
         tools:layout="@layout/fragment_first">
 
         <action
             android:id="@+id/action_FirstFragment_to_SecondFragment"
             app:destination="@id/SecondFragment" />
+
     </fragment>
 
     <!-- 3. Asistente (SecondFragment) -->
     <fragment
         android:id="@+id/SecondFragment"
         android:name="com.rinconsur.probadores.ui.asistente.SecondFragment"
-        android:label="@string/second_fragment_label"
+        android:label="Panel Operativo · Asistente"
         tools:layout="@layout/fragment_second">
 
         <action
             android:id="@+id/action_SecondFragment_to_FirstFragment"
             app:destination="@id/FirstFragment" />
+
     </fragment>
 
     <!-- 4. Administrador (AdminFragment) -->
@@ -57,6 +60,7 @@
         <action
             android:id="@+id/action_AdminFragment_to_SecondFragment"
             app:destination="@id/SecondFragment" />
+
     </fragment>
 
 </navigation>
