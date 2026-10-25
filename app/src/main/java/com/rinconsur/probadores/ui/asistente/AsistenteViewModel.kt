@@ -44,23 +44,29 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    // Al cambiar un probador a OCUPADO, desencolamos automáticamente al cliente en turno
     fun cambiarEstadoProbador(probador: ProbadorEntity, nuevoEstado: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val actualizado = probador.copy(estado = nuevoEstado)
             probadorDao.actualizarProbador(actualizado)
+
+            // Si el probador se marca como OCUPADO, liberamos/atendemos al cliente en la fila
+            if (nuevoEstado == "OCUPADO") {
+                val siguienteTurno = turnoDao.obtenerSiguienteTurnoEnEspera()
+                siguienteTurno?.let { turno ->
+                    turnoDao.actualizarEstadoTurno(turno.id, "ATENDIDO")
+                }
+            }
         }
     }
 
-    // Autenticación por Username
     fun autenticar(usernameInput: String, passInput: String, onResultado: (String?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            // Admin por defecto
             if (usernameInput == "admin" && passInput == "admin1234") {
                 onResultado("ADMIN")
                 return@launch
             }
 
-            // Consulta en BD
             val usuarioBD = usuarioDao.obtenerUsuarioPorUsername(usernameInput)
             if (usuarioBD != null && usuarioBD.contrasena == passInput) {
                 onResultado(usuarioBD.rol)
@@ -70,7 +76,6 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // Registro de cuenta
     fun crearUsuario(nombre: String, username: String, pass: String, rol: String, onCompleto: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val nuevoUsuario = UsuarioEntity(

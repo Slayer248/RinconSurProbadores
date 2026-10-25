@@ -23,7 +23,7 @@ object DataInitializer {
             usuarioDao.insertarUsuario(adminInicial)
         }
 
-        // 2. Inicializar Probadores si está vacío
+        // 2. Inicializar Probadores si la tabla está vacía
         val cantidad = probadorDao.obtenerCantidadProbadores()
         if (cantidad == 0) {
             val probadoresIniciales = listOf(
