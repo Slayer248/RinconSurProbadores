@@ -35,7 +35,13 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment_content_main) as NavHostFragment
         navController = navHostFragment.navController
 
-        appBarConfiguration = AppBarConfiguration(navController.graph)
+        // Configuramos loginFragment y AdminFragment como destinos principales para ocultar la flecha
+        appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.loginFragment,
+                R.id.AdminFragment
+            )
+        )
         setupActionBarWithNavController(navController, appBarConfiguration)
 
         // Inicialización de datos para Usuarios y Probadores

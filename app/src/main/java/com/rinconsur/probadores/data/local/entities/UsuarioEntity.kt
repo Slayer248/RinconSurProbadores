@@ -3,11 +3,11 @@ package com.rinconsur.probadores.data.local.entities
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "usuario")
+@Entity(tableName = "usuarios")
 data class UsuarioEntity(
     @PrimaryKey
-    val rut: String,              // Ej: "12345678-K" o "admin"
-    val nombreCompleto: String,
+    val username: String, // Clave única de usuario
+    val nombre: String,   // Nombre completo
     val contrasena: String,
-    val rol: String                // "ADMIN", "ASISTENTE", "CLIENTE"
+    val rol: String       // "ADMIN" o "ASISTENTE"
 )

@@ -17,11 +17,9 @@ interface ProbadorDao {
     @Update
     suspend fun actualizarProbador(probador: ProbadorEntity)
 
-    // Nombre de la tabla ajustado a "probador"
     @Query("SELECT * FROM probador")
     fun obtenerTodosProbadores(): Flow<List<ProbadorEntity>>
 
-    // Cuenta directamente en la tabla "probador"
     @Query("SELECT COUNT(*) FROM probador")
     suspend fun obtenerCantidadProbadores(): Int
 }

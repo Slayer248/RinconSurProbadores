@@ -5,7 +5,7 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/loginFragment">
 
-    <!-- 1. Pantalla Inicial: Login -->
+    <!-- 1. Login -->
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.rinconsur.probadores.ui.auth.LoginFragment"
@@ -18,9 +18,12 @@
         <action
             android:id="@+id/action_loginFragment_to_SecondFragment"
             app:destination="@id/SecondFragment" />
+        <action
+            android:id="@+id/action_loginFragment_to_AdminFragment"
+            app:destination="@id/AdminFragment" />
     </fragment>
 
-    <!-- 2. Vista Cliente -->
+    <!-- 2. Cliente (FirstFragment) -->
     <fragment
         android:id="@+id/FirstFragment"
         android:name="com.rinconsur.probadores.ui.cliente.FirstFragment"
@@ -32,7 +35,7 @@
             app:destination="@id/SecondFragment" />
     </fragment>
 
-    <!-- 3. Vista Asistente -->
+    <!-- 3. Asistente (SecondFragment) -->
     <fragment
         android:id="@+id/SecondFragment"
         android:name="com.rinconsur.probadores.ui.asistente.SecondFragment"
@@ -42,6 +45,18 @@
         <action
             android:id="@+id/action_SecondFragment_to_FirstFragment"
             app:destination="@id/FirstFragment" />
+    </fragment>
+
+    <!-- 4. Administrador (AdminFragment) -->
+    <fragment
+        android:id="@+id/AdminFragment"
+        android:name="com.rinconsur.probadores.ui.admin.AdminFragment"
+        android:label="Panel de Administración"
+        tools:layout="@layout/fragment_admin">
+
+        <action
+            android:id="@+id/action_AdminFragment_to_SecondFragment"
+            app:destination="@id/SecondFragment" />
     </fragment>
 
 </navigation>

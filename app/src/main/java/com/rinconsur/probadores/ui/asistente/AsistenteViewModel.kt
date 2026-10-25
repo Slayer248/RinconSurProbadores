@@ -19,12 +19,15 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
     private val turnoDao = db.turnoDao()
     private val usuarioDao = db.usuarioDao()
 
-    // --- Flujos y LiveData existentes ---
     val probadoresLiveData: LiveData<List<ProbadorEntity>> =
         probadorDao.obtenerTodosProbadores().asLiveData(Dispatchers.IO)
 
     val turnosEnEsperaLiveData: LiveData<List<TurnoEntity>> =
-        turnoDao.obtenerTurnosEnEspera().asLiveData(Dispatchers.IO)
+        turnoDao.obtenerTurnosPorEstado("EN_ESPERA").asLiveData(Dispatchers.IO)
+
+    val usuariosLiveData: LiveData<List<UsuarioEntity>> =
+        usuarioDao.obtenerTodosUsuarios().asLiveData(Dispatchers.IO)
+
     fun registrarTurno(nombreCliente: String, cantidadPrendas: Int, esPreferente: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             val ultimoNumero = turnoDao.obtenerUltimoNumero() ?: 1000
@@ -48,15 +51,36 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- NUEVO: Funciones para Autenticación de Usuarios ---
-    fun autenticar(rut: String, pass: String, onResultado: (UsuarioEntity?) -> Unit) {
+    // Autenticación por Username
+    fun autenticar(usernameInput: String, passInput: String, onResultado: (String?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val usuario = usuarioDao.obtenerUsuarioPorRut(rut)
-            if (usuario != null && usuario.contrasena == pass) {
-                onResultado(usuario)
+            // Admin por defecto
+            if (usernameInput == "admin" && passInput == "admin1234") {
+                onResultado("ADMIN")
+                return@launch
+            }
+
+            // Consulta en BD
+            val usuarioBD = usuarioDao.obtenerUsuarioPorUsername(usernameInput)
+            if (usuarioBD != null && usuarioBD.contrasena == passInput) {
+                onResultado(usuarioBD.rol)
             } else {
                 onResultado(null)
             }
+        }
+    }
+
+    // Registro de cuenta
+    fun crearUsuario(nombre: String, username: String, pass: String, rol: String, onCompleto: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val nuevoUsuario = UsuarioEntity(
+                username = username,
+                nombre = nombre,
+                contrasena = pass,
+                rol = rol
+            )
+            usuarioDao.insertarUsuario(nuevoUsuario)
+            onCompleto()
         }
     }
 }

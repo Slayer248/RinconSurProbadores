@@ -6,9 +6,9 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "probador")
 data class ProbadorEntity(
-    @PrimaryKey val codigo: String, // P-01 a P-08
-    val esAccesible: Boolean,       // true solo para P-08
+    @PrimaryKey val codigo: String,
+    val esAccesible: Boolean,
     val estado: String,             // LIBRE, OCUPADO, ORDENAMIENTO, FUERA_SERVICIO
-    val desdeHora: String,          // HH:mm
+    val desdeHora: String,
     val motivoFueraServicio: String? = null
 )

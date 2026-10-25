@@ -12,12 +12,12 @@ object DataInitializer {
         probadorDao: ProbadorDao
     ) {
         // 1. Inicializar Administrador por defecto si no existe
-        val adminExiste = usuarioDao.obtenerUsuarioPorRut("admin")
+        val adminExiste = usuarioDao.obtenerUsuarioPorUsername("admin")
         if (adminExiste == null) {
             val adminInicial = UsuarioEntity(
-                rut = "admin",
-                nombreCompleto = "Administrador Principal",
-                contrasena = "admin123",
+                username = "admin",
+                nombre = "Administrador Principal",
+                contrasena = "admin1234",
                 rol = "ADMIN"
             )
             usuarioDao.insertarUsuario(adminInicial)
