@@ -8,6 +8,7 @@ data class UsuarioEntity(
     @PrimaryKey
     val username: String, // Clave única de usuario
     val nombre: String,   // Nombre completo
+    val correo: String = "", // Correo electrónico
     val contrasena: String,
     val rol: String       // "ADMIN" o "ASISTENTE"
 )

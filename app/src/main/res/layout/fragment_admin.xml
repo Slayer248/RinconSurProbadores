@@ -12,14 +12,14 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- Acceso directo a Asistente -->
+        <!-- Modificar Perfil -->
         <Button
-            android:id="@+id/btnIrVistaAsistente"
+            android:id="@+id/btnModificarPerfil"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="20dp"
-            android:text="Acceder como Asistente de Probadores" />
+            android:text="Modificar Perfil" />
 
         <!-- Formulario Crear Cuenta -->
         <com.google.android.material.card.MaterialCardView
@@ -61,6 +61,20 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
+                    android:hint="Correo Electrónico">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCorreoNuevo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textEmailAddress" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:hint="Nombre de Usuario">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -79,6 +93,20 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPassNuevo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:hint="Confirmar Contraseña">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etConfirmPassNuevo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPassword" />
@@ -128,7 +156,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
-            android:text="Toca una cuenta para consultar credenciales"
+            android:text="Toca una cuenta para consultar detalles"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="12sp" />
 
@@ -137,15 +165,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:nestedScrollingEnabled="false" />
-
-        <!-- Botón Volver Atrás explícito -->
-        <Button
-            android:id="@+id/btnVolverAtras"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Volver Atrás" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

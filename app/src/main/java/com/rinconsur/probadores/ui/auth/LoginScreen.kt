@@ -30,6 +30,10 @@ fun LoginScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    var mostrarDialogRecuperar by remember { mutableStateOf(false) }
+    var correoRecuperacion by remember { mutableStateOf("") }
+    var nuevaPassword by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -112,13 +116,6 @@ fun LoginScreen(
                     text = "Acceso Empleados",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-
-                Text(
-                    text = "Admin: admin / admin1234",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -183,7 +180,98 @@ fun LoginScreen(
                 ) {
                     Text("Iniciar Sesión")
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextButton(
+                    onClick = { mostrarDialogRecuperar = true },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text("¿Olvidaste tu contraseña?")
+                }
             }
         }
+    }
+
+    // Diálogo para recuperación de contraseña
+    if (mostrarDialogRecuperar) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogRecuperar = false },
+            title = { Text("Recuperar Contraseña") },
+            text = {
+                Column {
+                    Text(
+                        text = "Ingresa el correo electrónico asociado a tu cuenta y la nueva contraseña.",
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = correoRecuperacion,
+                        onValueChange = { correoRecuperacion = it },
+                        label = { Text("Correo Electrónico") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = nuevaPassword,
+                        onValueChange = { nuevaPassword = it },
+                        label = { Text("Nueva Contraseña") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val mailClean = correoRecuperacion.trim()
+                        val passClean = nuevaPassword.trim()
+
+                        if (mailClean.isEmpty() || passClean.isEmpty()) {
+                            Toast.makeText(context, "Ingresa el correo y la nueva contraseña", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(mailClean).matches()) {
+                            Toast.makeText(context, "Ingresa un correo electrónico válido", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        val errPass = com.rinconsur.probadores.utils.PasswordValidator.validarContrasena(passClean)
+                        if (errPass != null) {
+                            Toast.makeText(context, errPass, Toast.LENGTH_LONG).show()
+                            return@Button
+                        }
+
+                        viewModel.recuperarContrasena(mailClean, passClean) { exito, mensaje ->
+                            Toast.makeText(context, mensaje, Toast.LENGTH_LONG).show()
+                            if (exito) {
+                                correoRecuperacion = ""
+                                nuevaPassword = ""
+                                mostrarDialogRecuperar = false
+                            }
+                        }
+                    }
+                ) {
+                    Text("Cambiar Contraseña")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {
+                        correoRecuperacion = ""
+                        nuevaPassword = ""
+                        mostrarDialogRecuperar = false
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }

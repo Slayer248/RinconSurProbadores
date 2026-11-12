@@ -13,7 +13,7 @@ import com.rinconsur.probadores.data.local.entities.UsuarioEntity
 
 @Database(
     entities = [UsuarioEntity::class, ProbadorEntity::class, TurnoEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -16,6 +16,12 @@ interface UsuarioDao {
     @Query("SELECT * FROM usuarios WHERE LOWER(username) = LOWER(:username) LIMIT 1")
     suspend fun obtenerUsuarioPorUsername(username: String): UsuarioEntity?
 
+    @Query("SELECT * FROM usuarios WHERE LOWER(correo) = LOWER(:correo) LIMIT 1")
+    suspend fun obtenerUsuarioPorCorreo(correo: String): UsuarioEntity?
+
     @Query("SELECT * FROM usuarios ORDER BY nombre ASC")
     fun obtenerTodosUsuarios(): Flow<List<UsuarioEntity>>
+
+    @Query("DELETE FROM usuarios WHERE LOWER(username) = LOWER(:username)")
+    suspend fun eliminarUsuarioPorUsername(username: String)
 }

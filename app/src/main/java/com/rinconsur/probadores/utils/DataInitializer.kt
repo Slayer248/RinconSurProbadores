@@ -17,7 +17,8 @@ object DataInitializer {
             val adminInicial = UsuarioEntity(
                 username = "admin",
                 nombre = "Administrador Principal",
-                contrasena = "admin1234",
+                correo = "admin@rinconsur.com",
+                contrasena = PasswordHasher.hashPassword("admin1234"),
                 rol = "ADMIN"
             )
             usuarioDao.insertarUsuario(adminInicial)

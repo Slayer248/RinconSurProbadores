@@ -143,25 +143,18 @@ class MainActivity : ComponentActivity() {
                             val username = backStackEntry.arguments?.getString("username") ?: "Asistente"
                             AsistenteScreen(
                                 username = username,
-                                viewModel = viewModel,
-                                onNavigateToCliente = { name ->
-                                    navController.navigate("cliente/$name")
-                                }
+                                viewModel = viewModel
                             )
                         }
 
                         composable(
                             route = "admin/{username}",
                             arguments = listOf(navArgument("username") { type = NavType.StringType })
-                        ) {
+                        ) { backStackEntry ->
+                            val username = backStackEntry.arguments?.getString("username") ?: "Admin"
                             AdminScreen(
-                                viewModel = viewModel,
-                                onNavigateToAsistente = { name ->
-                                    navController.navigate("asistente/$name")
-                                },
-                                onNavigateBack = {
-                                    navController.popBackStack()
-                                }
+                                username = username,
+                                viewModel = viewModel
                             )
                         }
                     }
