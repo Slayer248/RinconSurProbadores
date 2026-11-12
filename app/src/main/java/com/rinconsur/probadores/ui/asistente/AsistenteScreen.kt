@@ -350,6 +350,15 @@ private fun ItemProbador(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            if (probador.estado == "FUERA_SERVICIO") {
+                Text(
+                    text = "Bloqueado por administración" +
+                        (probador.motivoFueraServicio?.let { ": $it" } ?: ""),
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
@@ -357,7 +366,7 @@ private fun ItemProbador(
                 enabled = probador.estado != "FUERA_SERVICIO",
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Cambiar a $siguienteEstado")
+                Text(if (probador.estado == "FUERA_SERVICIO") "No disponible" else "Cambiar a $siguienteEstado")
             }
         }
     }

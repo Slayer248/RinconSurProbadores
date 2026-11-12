@@ -1,6 +1,7 @@
 package com.rinconsur.probadores.ui.asistente
 
 import android.app.Application
+import android.database.sqlite.SQLiteConstraintException
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
@@ -77,9 +78,12 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
 
                 val usuarioBD = usuarioDao.obtenerUsuarioPorUsername(cleanUser)
                 if (usuarioBD != null && PasswordHasher.verifyPassword(cleanPass, usuarioBD.contrasena)) {
+                    if (usuarioBD.bloqueado) {
+                        return@withContext ROL_BLOQUEADO
+                    }
                     // Migrar a hash SHA-256 si la clave estaba en texto plano heredado
                     if (usuarioBD.contrasena == cleanPass) {
-                        usuarioDao.insertarUsuario(usuarioBD.copy(contrasena = PasswordHasher.hashPassword(cleanPass)))
+                        usuarioDao.actualizarUsuario(usuarioBD.copy(contrasena = PasswordHasher.hashPassword(cleanPass)))
                     }
                     usuarioBD.rol
                 } else {
@@ -122,8 +126,12 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
                     contrasena = PasswordHasher.hashPassword(pass.trim()),
                     rol = rol
                 )
-                usuarioDao.insertarUsuario(nuevoUsuario)
-                null
+                try {
+                    usuarioDao.insertarUsuario(nuevoUsuario)
+                    null
+                } catch (e: SQLiteConstraintException) {
+                    "El nombre de usuario '$cleanUser' ya se encuentra registrado"
+                }
             }
             onResultado(errorMsg)
         }
@@ -144,7 +152,7 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
                     Pair(false, "No se encontró ninguna cuenta registrada con el correo: $cleanCorreo")
                 } else {
                     val usuarioActualizado = usuarioBD.copy(contrasena = PasswordHasher.hashPassword(cleanPass))
-                    usuarioDao.insertarUsuario(usuarioActualizado)
+                    usuarioDao.actualizarUsuario(usuarioActualizado)
                     Pair(true, "Contraseña actualizada exitosamente para la cuenta de ${usuarioBD.nombre} (${usuarioBD.username})")
                 }
             }
@@ -216,24 +224,164 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
                 }
                 val rolFinal = usuarioBD?.rol ?: "ASISTENTE"
 
-                // 5. Si cambió el username, eliminamos el registro previo para actualizar la clave primaria
-                if (!userClean.equals(oldUserClean, ignoreCase = true)) {
-                    usuarioDao.eliminarUsuarioPorUsername(oldUserClean)
-                }
-
                 val usuarioModificado = UsuarioEntity(
                     username = userClean,
                     nombre = nomClean,
                     correo = correoClean,
                     contrasena = finalPassword,
-                    rol = rolFinal
+                    rol = rolFinal,
+                    bloqueado = usuarioBD?.bloqueado ?: false
                 )
 
-                usuarioDao.insertarUsuario(usuarioModificado)
+                // 5. Guardar: update si es la misma clave, reemplazo atómico si cambió el username
+                when {
+                    usuarioBD == null -> usuarioDao.insertarUsuario(usuarioModificado)
+                    usuarioBD.username == userClean -> usuarioDao.actualizarUsuario(usuarioModificado)
+                    else -> usuarioDao.reemplazarUsername(usuarioBD.username, usuarioModificado)
+                }
 
                 Triple(true, "Perfil actualizado con éxito", userClean)
             }
             onResultado(exito, mensaje, updatedUser)
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // Administración de cuentas
+    // ---------------------------------------------------------------------
+
+    /** Edita los datos de otra cuenta. El username es la clave y no se modifica aquí. */
+    fun editarCuenta(
+        username: String,
+        nuevoNombre: String,
+        nuevoCorreo: String,
+        nuevoRol: String,
+        nuevaPassword: String,
+        onResultado: (String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val error = withContext(Dispatchers.IO) {
+                val usuarioBD = usuarioDao.obtenerUsuarioPorUsername(username.trim())
+                    ?: return@withContext "La cuenta '$username' ya no existe"
+
+                val correoClean = nuevoCorreo.trim()
+                val otroCorreo = usuarioDao.obtenerUsuarioPorCorreo(correoClean)
+                if (otroCorreo != null && otroCorreo.username != usuarioBD.username) {
+                    return@withContext "El correo electrónico '$correoClean' ya se encuentra registrado por otra cuenta"
+                }
+
+                val passClean = nuevaPassword.trim()
+                usuarioDao.actualizarUsuario(
+                    usuarioBD.copy(
+                        nombre = nuevoNombre.trim(),
+                        correo = correoClean,
+                        rol = nuevoRol,
+                        contrasena = if (passClean.isNotEmpty()) PasswordHasher.hashPassword(passClean) else usuarioBD.contrasena
+                    )
+                )
+                null
+            }
+            onResultado(error)
+        }
+    }
+
+    fun eliminarCuenta(username: String, adminActual: String, onResultado: (String?) -> Unit) {
+        viewModelScope.launch {
+            val error = withContext(Dispatchers.IO) {
+                if (username.equals(adminActual, ignoreCase = true)) {
+                    return@withContext "No puedes eliminar tu propia cuenta"
+                }
+                usuarioDao.eliminarUsuarioPorUsername(username)
+                null
+            }
+            onResultado(error)
+        }
+    }
+
+    fun cambiarBloqueoCuenta(username: String, bloquear: Boolean, adminActual: String, onResultado: (String?) -> Unit) {
+        viewModelScope.launch {
+            val error = withContext(Dispatchers.IO) {
+                if (username.equals(adminActual, ignoreCase = true)) {
+                    return@withContext "No puedes bloquear tu propia cuenta"
+                }
+                usuarioDao.cambiarBloqueo(username, bloquear)
+                null
+            }
+            onResultado(error)
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Administración de probadores
+    // ---------------------------------------------------------------------
+
+    fun crearProbador(codigo: String, esAccesible: Boolean, onResultado: (String?) -> Unit) {
+        viewModelScope.launch {
+            val error = withContext(Dispatchers.IO) {
+                val codigoClean = codigo.trim().uppercase()
+                if (probadorDao.obtenerProbadorPorCodigo(codigoClean) != null) {
+                    return@withContext "Ya existe un probador con el código '$codigoClean'"
+                }
+                try {
+                    probadorDao.insertarProbador(
+                        ProbadorEntity(
+                            codigo = codigoClean,
+                            esAccesible = esAccesible,
+                            estado = "LIBRE",
+                            desdeHora = "-"
+                        )
+                    )
+                    null
+                } catch (e: SQLiteConstraintException) {
+                    "Ya existe un probador con el código '$codigoClean'"
+                }
+            }
+            onResultado(error)
+        }
+    }
+
+    /** Bloquear deja el probador FUERA_SERVICIO (no se puede usar); desbloquear lo devuelve a LIBRE. */
+    fun cambiarBloqueoProbador(
+        probador: ProbadorEntity,
+        bloquear: Boolean,
+        motivo: String,
+        onResultado: (String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val error = withContext(Dispatchers.IO) {
+                if (bloquear && probador.estado == "OCUPADO") {
+                    return@withContext "No se puede bloquear ${probador.codigo} mientras está ocupado"
+                }
+                val actualizado = if (bloquear) {
+                    probador.copy(
+                        estado = ESTADO_FUERA_SERVICIO,
+                        motivoFueraServicio = motivo.trim().ifEmpty { null }
+                    )
+                } else {
+                    probador.copy(estado = "LIBRE", desdeHora = "-", motivoFueraServicio = null)
+                }
+                probadorDao.actualizarProbador(actualizado)
+                null
+            }
+            onResultado(error)
+        }
+    }
+
+    fun eliminarProbador(probador: ProbadorEntity, onResultado: (String?) -> Unit) {
+        viewModelScope.launch {
+            val error = withContext(Dispatchers.IO) {
+                if (probador.estado == "OCUPADO") {
+                    return@withContext "No se puede eliminar ${probador.codigo} mientras está ocupado"
+                }
+                probadorDao.eliminarProbador(probador)
+                null
+            }
+            onResultado(error)
+        }
+    }
+
+    companion object {
+        const val ROL_BLOQUEADO = "BLOQUEADO"
+        const val ESTADO_FUERA_SERVICIO = "FUERA_SERVICIO"
     }
 }

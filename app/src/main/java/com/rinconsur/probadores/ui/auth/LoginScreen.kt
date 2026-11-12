@@ -170,6 +170,9 @@ fun LoginScreen(
                             when (rol) {
                                 "ADMIN" -> onNavigateToAdmin(userClean)
                                 "ASISTENTE" -> onNavigateToAsistente(userClean)
+                                AsistenteViewModel.ROL_BLOQUEADO -> {
+                                    Toast.makeText(context, "Tu cuenta está bloqueada. Contacta al administrador", Toast.LENGTH_LONG).show()
+                                }
                                 else -> {
                                     Toast.makeText(context, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
                                 }
