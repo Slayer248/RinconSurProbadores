@@ -1,89 +1,142 @@
 package com.rinconsur.probadores
 
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material3.*
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.NavController
-import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.rinconsur.probadores.data.local.AppDatabase
-import com.rinconsur.probadores.databinding.ActivityMainBinding
+import com.rinconsur.probadores.ui.admin.AdminScreen
+import com.rinconsur.probadores.ui.asistente.AsistenteScreen
+import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
+import com.rinconsur.probadores.ui.auth.LoginScreen
+import com.rinconsur.probadores.ui.cliente.ClienteScreen
+import com.rinconsur.probadores.ui.theme.RinconSurTheme
 import com.rinconsur.probadores.utils.DataInitializer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
-    private lateinit var appBarConfiguration: AppBarConfiguration
-    private lateinit var binding: ActivityMainBinding
-    private lateinit var navController: NavController
+    private val viewModel: AsistenteViewModel by viewModels()
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        setSupportActionBar(binding.toolbar)
-
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment_content_main) as NavHostFragment
-        navController = navHostFragment.navController
-
-        appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.loginFragment,
-                R.id.AdminFragment
-            )
-        )
-        setupActionBarWithNavController(navController, appBarConfiguration)
-
-        // Ocultar el menú de la Toolbar si estamos en el Login o en Vista Cliente
-        navController.addOnDestinationChangedListener { _, destination, _ ->
-            when (destination.id) {
-                R.id.loginFragment, R.id.FirstFragment -> {
-                    binding.toolbar.menu.clear() // Oculta el menú de la barra
-                }
-                else -> {
-                    invalidateOptionsMenu() // Redibuja el menú en Asistente y Admin
-                }
-            }
-        }
 
         val db = AppDatabase.getDatabase(this)
         lifecycleScope.launch(Dispatchers.IO) {
             DataInitializer.inicializarDatosSiEstaVacio(
                 usuarioDao = db.usuarioDao(),
-                probadorDao = db.probadorDao()
+                probadorDao = db.probadorDao(),
             )
         }
-    }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Solo infla el menú si la pantalla actual es Admin o Asistente
-        val actualId = navController.currentDestination?.id
-        if (actualId == R.id.SecondFragment || actualId == R.id.AdminFragment) {
-            menuInflater.inflate(R.menu.menu_main, menu)
-        }
-        return true
-    }
+        setContent {
+            RinconSurTheme {
+                val navController = rememberNavController()
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_logout -> {
-                // Limpia el historial y redirige al Login
-                navController.popBackStack(R.id.loginFragment, false)
-                true
+                val showLogoutButton = (currentRoute?.startsWith("asistente") == true) || (currentRoute?.startsWith("admin") == true)
+
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("Rincón Sur Probadores") },
+                            actions = {
+                                if (showLogoutButton) {
+                                    IconButton(
+                                        onClick = {
+                                            navController.navigate("login") {
+                                                popUpTo("login") { inclusive = true }
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                            contentDescription = "Cerrar Sesión"
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                ) { innerPadding ->
+                    NavHost(
+                        navController = navController,
+                        startDestination = "login",
+                        modifier = Modifier.padding(innerPadding)
+                    ) {
+                        composable("login") {
+                            LoginScreen(
+                                viewModel = viewModel,
+                                onNavigateToCliente = { username ->
+                                    navController.navigate("cliente/$username")
+                                },
+                                onNavigateToAsistente = { username ->
+                                    navController.navigate("asistente/$username")
+                                },
+                                onNavigateToAdmin = { username ->
+                                    navController.navigate("admin/$username")
+                                }
+                            )
+                        }
+
+                        composable(
+                            route = "cliente/{username}",
+                            arguments = listOf(navArgument("username") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val username = backStackEntry.arguments?.getString("username") ?: "Cliente"
+                            ClienteScreen(
+                                username = username,
+                                viewModel = viewModel
+                            )
+                        }
+
+                        composable(
+                            route = "asistente/{username}",
+                            arguments = listOf(navArgument("username") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val username = backStackEntry.arguments?.getString("username") ?: "Asistente"
+                            AsistenteScreen(
+                                username = username,
+                                viewModel = viewModel,
+                                onNavigateToCliente = { name ->
+                                    navController.navigate("cliente/$name")
+                                }
+                            )
+                        }
+
+                        composable(
+                            route = "admin/{username}",
+                            arguments = listOf(navArgument("username") { type = NavType.StringType })
+                        ) {
+                            AdminScreen(
+                                viewModel = viewModel,
+                                onNavigateToAsistente = { name ->
+                                    navController.navigate("asistente/$name")
+                                },
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                    }
+                }
             }
-            else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 }
