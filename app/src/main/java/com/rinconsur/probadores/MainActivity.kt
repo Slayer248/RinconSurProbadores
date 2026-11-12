@@ -23,7 +23,10 @@ import com.rinconsur.probadores.ui.asistente.AsistenteScreen
 import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
 import com.rinconsur.probadores.ui.auth.LoginScreen
 import com.rinconsur.probadores.ui.cliente.ClienteScreen
+import com.rinconsur.probadores.ui.theme.RetailDarkNavy
 import com.rinconsur.probadores.ui.theme.RinconSurTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import com.rinconsur.probadores.utils.DataInitializer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,7 +58,17 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text("Rincón Sur Probadores") },
+                            title = {
+                                Text(
+                                    text = "Rincón Sur Probadores",
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = RetailDarkNavy,
+                                titleContentColor = Color.White,
+                                actionIconContentColor = Color.White
+                            ),
                             actions = {
                                 if (showLogoutButton) {
                                     IconButton(

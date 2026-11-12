@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -111,6 +112,13 @@ fun LoginScreen(
                     text = "Acceso Empleados",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
+                Text(
+                    text = "Admin: admin / admin1234",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
@@ -119,6 +127,10 @@ fun LoginScreen(
                     onValueChange = { username = it },
                     label = { Text("Usuario") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        capitalization = KeyboardCapitalization.None
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -130,7 +142,10 @@ fun LoginScreen(
                     label = { Text("Contraseña") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        capitalization = KeyboardCapitalization.None
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -149,8 +164,8 @@ fun LoginScreen(
                             Toast.makeText(context, "El usuario debe tener mínimo 3 letras", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        if (passClean.length < 8) {
-                            Toast.makeText(context, "La contraseña debe tener mínimo 8 caracteres", Toast.LENGTH_SHORT).show()
+                        if (passClean.length < 4) {
+                            Toast.makeText(context, "La contraseña debe tener mínimo 4 caracteres", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
 

@@ -11,6 +11,7 @@ import com.rinconsur.probadores.data.local.entities.TurnoEntity
 import com.rinconsur.probadores.data.local.entities.UsuarioEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AsistenteViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -61,30 +62,40 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun autenticar(usernameInput: String, passInput: String, onResultado: (String?) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            if (usernameInput == "admin" && passInput == "admin1234") {
-                onResultado("ADMIN")
-                return@launch
-            }
+        viewModelScope.launch {
+            val rol = withContext(Dispatchers.IO) {
+                val cleanUser = usernameInput.trim()
+                val cleanPass = passInput.trim()
 
-            val usuarioBD = usuarioDao.obtenerUsuarioPorUsername(usernameInput)
-            if (usuarioBD != null && usuarioBD.contrasena == passInput) {
-                onResultado(usuarioBD.rol)
-            } else {
-                onResultado(null)
+                // Credenciales maestras por defecto para administrador
+                if (cleanUser.equals("admin", ignoreCase = true) && 
+                    (cleanPass == "admin1234" || cleanPass == "admin")
+                ) {
+                    return@withContext "ADMIN"
+                }
+
+                val usuarioBD = usuarioDao.obtenerUsuarioPorUsername(cleanUser)
+                if (usuarioBD != null && usuarioBD.contrasena == cleanPass) {
+                    usuarioBD.rol
+                } else {
+                    null
+                }
             }
+            onResultado(rol)
         }
     }
 
     fun crearUsuario(nombre: String, username: String, pass: String, rol: String, onCompleto: () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val nuevoUsuario = UsuarioEntity(
-                username = username,
-                nombre = nombre,
-                contrasena = pass,
-                rol = rol
-            )
-            usuarioDao.insertarUsuario(nuevoUsuario)
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val nuevoUsuario = UsuarioEntity(
+                    username = username.trim(),
+                    nombre = nombre.trim(),
+                    contrasena = pass.trim(),
+                    rol = rol
+                )
+                usuarioDao.insertarUsuario(nuevoUsuario)
+            }
             onCompleto()
         }
     }
