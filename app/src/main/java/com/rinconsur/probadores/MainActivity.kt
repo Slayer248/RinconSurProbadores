@@ -3,7 +3,6 @@ package com.rinconsur.probadores
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -14,7 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
@@ -26,20 +27,15 @@ import androidx.navigation.navArgument
 import com.rinconsur.probadores.data.local.AppDatabase
 import com.rinconsur.probadores.ui.admin.AdminScreen
 import com.rinconsur.probadores.ui.asistente.AsistenteScreen
-import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
 import com.rinconsur.probadores.ui.auth.LoginScreen
 import com.rinconsur.probadores.ui.cliente.ClienteScreen
 import com.rinconsur.probadores.ui.theme.RetailDarkNavy
 import com.rinconsur.probadores.ui.theme.RinconSurTheme
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import com.rinconsur.probadores.utils.DataInitializer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
-    private val viewModel: AsistenteViewModel by viewModels()
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,7 +108,6 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable("login") {
                             LoginScreen(
-                                viewModel = viewModel,
                                 onNavigateToCliente = { username ->
                                     navController.navigate("cliente/$username")
                                 },
@@ -132,7 +127,11 @@ class MainActivity : ComponentActivity() {
                             val username = backStackEntry.arguments?.getString("username") ?: "Cliente"
                             ClienteScreen(
                                 username = username,
-                                viewModel = viewModel
+                                onNavigateToLogin = {
+                                    navController.navigate("login") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                }
                             )
                         }
 
@@ -142,8 +141,7 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val username = backStackEntry.arguments?.getString("username") ?: "Asistente"
                             AsistenteScreen(
-                                username = username,
-                                viewModel = viewModel
+                                username = username
                             )
                         }
 
@@ -153,8 +151,7 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val username = backStackEntry.arguments?.getString("username") ?: "Admin"
                             AdminScreen(
-                                username = username,
-                                viewModel = viewModel
+                                username = username
                             )
                         }
                     }

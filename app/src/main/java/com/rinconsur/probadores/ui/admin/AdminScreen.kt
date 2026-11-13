@@ -27,9 +27,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rinconsur.probadores.data.local.entities.ProbadorEntity
 import com.rinconsur.probadores.data.local.entities.UsuarioEntity
-import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
 import com.rinconsur.probadores.utils.PasswordValidator
 
 /** Acción pendiente de confirmación en el panel de administración. */
@@ -43,7 +43,7 @@ private sealed interface AccionPendiente {
 @Composable
 fun AdminScreen(
     username: String,
-    viewModel: AsistenteViewModel
+    viewModel: AdminViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var currentUsernameState by remember(username) { mutableStateOf(username) }
@@ -488,7 +488,7 @@ fun AdminScreen(
 @Composable
 private fun CuentaDialog(
     usuarioEditar: UsuarioEntity?,
-    viewModel: AsistenteViewModel,
+    viewModel: AdminViewModel,
     onDismiss: () -> Unit
 ) {
     val esEdicion = usuarioEditar != null
@@ -710,7 +710,7 @@ private fun CuentaDialog(
 
 @Composable
 private fun ProbadorDialog(
-    viewModel: AsistenteViewModel,
+    viewModel: AdminViewModel,
     onDismiss: () -> Unit
 ) {
     var codigo by remember { mutableStateOf("") }
@@ -801,7 +801,7 @@ private fun BloqueoProbadorDialog(
     onDismiss: () -> Unit,
     onConfirmar: (bloquear: Boolean, motivo: String) -> Unit
 ) {
-    val bloquear = probador.estado != AsistenteViewModel.ESTADO_FUERA_SERVICIO
+    val bloquear = probador.estado != AdminViewModel.ESTADO_FUERA_SERVICIO
     var motivo by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -977,7 +977,7 @@ private fun ItemProbadorAdmin(
     onBloqueo: () -> Unit,
     onEliminar: () -> Unit
 ) {
-    val bloqueado = probador.estado == AsistenteViewModel.ESTADO_FUERA_SERVICIO
+    val bloqueado = probador.estado == AdminViewModel.ESTADO_FUERA_SERVICIO
 
     Card(
         modifier = Modifier.fillMaxWidth(),

@@ -6,28 +6,50 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rinconsur.probadores.utils.PasswordValidator
+import com.rinconsur.probadores.utils.SessionManager
 
 @Composable
 fun LoginScreen(
-    viewModel: AsistenteViewModel,
+    viewModel: LoginViewModel = viewModel(),
     onNavigateToCliente: (String) -> Unit,
     onNavigateToAsistente: (String) -> Unit,
     onNavigateToAdmin: (String) -> Unit
 ) {
-    var nombreInvitado by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    val turnosEnEspera by viewModel.turnosEnEsperaLiveData.observeAsState(initial = emptyList())
+
+    val ultimoInvitadoRecordado = remember(context) {
+        SessionManager.obtenerUltimoInvitado(context)
+    }
+
+    val turnoRecordado = remember(turnosEnEspera, ultimoInvitadoRecordado) {
+        if (!ultimoInvitadoRecordado.isNullOrBlank()) {
+            turnosEnEspera.find { it.nombreCliente.equals(ultimoInvitadoRecordado, ignoreCase = true) }
+        } else null
+    }
+
+    val posicionTurnoRecordado = remember(turnoRecordado, turnosEnEspera) {
+        if (turnoRecordado != null) turnosEnEspera.indexOf(turnoRecordado) + 1 else 0
+    }
+
+    var nombreInvitado by remember { mutableStateOf(ultimoInvitadoRecordado ?: "") }
     var nombreInvitadoError by remember { mutableStateOf<String?>(null) }
 
     var username by remember { mutableStateOf("") }
@@ -66,8 +88,53 @@ fun LoginScreen(
             text = "Control de Acceso y Probadores",
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 24.dp)
         )
+
+        // Banner para reingresar a un turno activo recordado en el dispositivo
+        if (ultimoInvitadoRecordado != null && turnoRecordado != null) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.HourglassTop,
+                        contentDescription = "Turno Recordado",
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .padding(end = 12.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "¡Hola, $ultimoInvitadoRecordado!",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Tienes el turno ${turnoRecordado.numeroTurno} activo en la posición #$posicionTurnoRecordado de la fila.",
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                SessionManager.guardarUltimoInvitado(context, ultimoInvitadoRecordado)
+                                onNavigateToCliente(ultimoInvitadoRecordado)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Reingresar a mi Turno")
+                        }
+                    }
+                }
+            }
+        }
 
         // Card Acceso Invitado
         Card(
@@ -106,10 +173,21 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        val error = viewModel.validarNombreInvitado(nombreInvitado)
-                        nombreInvitadoError = error
-                        if (error == null) {
-                            onNavigateToCliente(nombreInvitado.trim())
+                        val basicError = viewModel.validarNombreInvitado(nombreInvitado)
+                        nombreInvitadoError = basicError
+
+                        if (basicError == null) {
+                            val cleanName = nombreInvitado.trim()
+                            viewModel.validarInvitadoDisponible(cleanName) { dbError ->
+                                // Si coincide con el invitado recordado y tiene un turno activo propio, permitir ingresar
+                                val esMismoInvitadoRecordado = cleanName.equals(ultimoInvitadoRecordado, ignoreCase = true) && turnoRecordado != null
+                                if (dbError == null || esMismoInvitadoRecordado) {
+                                    SessionManager.guardarUltimoInvitado(context, cleanName)
+                                    onNavigateToCliente(cleanName)
+                                } else {
+                                    nombreInvitadoError = dbError
+                                }
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -218,7 +296,7 @@ fun LoginScreen(
                                 when (rol) {
                                     "ADMIN" -> onNavigateToAdmin(username.trim())
                                     "ASISTENTE" -> onNavigateToAsistente(username.trim())
-                                    AsistenteViewModel.ROL_BLOQUEADO -> {
+                                    LoginViewModel.ROL_BLOQUEADO -> {
                                         loginGeneralError = "Tu cuenta se encuentra bloqueada. Contacta al administrador."
                                     }
                                     else -> {

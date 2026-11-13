@@ -1,32 +1,68 @@
 package com.rinconsur.probadores.ui.cliente
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rinconsur.probadores.data.local.entities.TurnoEntity
-import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
+import com.rinconsur.probadores.utils.NotificationHelper
 
 @Composable
 fun ClienteScreen(
     username: String,
-    viewModel: AsistenteViewModel
+    viewModel: ClienteViewModel = viewModel(),
+    onNavigateToLogin: () -> Unit
 ) {
+    val context = LocalContext.current
     var cantidadPrendasText by remember { mutableStateOf("") }
     var prendasError by remember { mutableStateOf<String?>(null) }
     var esPreferente by remember { mutableStateOf(false) }
     var turnoMensaje by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+
+    // Solicitud de Permiso Runtime POST_NOTIFICATIONS (Android 13+ / API 33+)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            NotificationHelper.vibrar(context, 300L)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        NotificationHelper.crearCanalNotificaciones(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!hasPermission) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     val probadores by viewModel.probadoresLiveData.observeAsState(initial = emptyList())
     val turnosEnEspera by viewModel.turnosEnEsperaLiveData.observeAsState(initial = emptyList())
@@ -42,20 +78,51 @@ fun ClienteScreen(
         if (miTurnoActivo != null) turnosEnEspera.indexOf(miTurnoActivo) + 1 else 0
     }
 
+    // Efecto: Notificar y vibrar cuando el turno del cliente pasa a posición #1
+    LaunchedEffect(posicionMiTurno) {
+        if (posicionMiTurno == 1 && miTurnoActivo != null) {
+            NotificationHelper.enviarNotificacion(
+                context = context,
+                titulo = "¡Tu turno está próximo!",
+                mensaje = "Estás en la posición #1 de la fila con el turno ${miTurnoActivo.numeroTurno}. ¡Prepárate para ingresar al probador!"
+            )
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text(
-            text = "Sesión: $username",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Sesión: $username",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
 
-        // Resumen de estado
+            OutlinedButton(
+                onClick = onNavigateToLogin,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Volver al inicio de sesión",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = "Iniciar Sesión", fontSize = 12.sp)
+            }
+        }
+
+        // Resumen de estado con números animados
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -70,57 +137,100 @@ fun ClienteScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = "Probadores Libres", fontSize = 12.sp)
-                    Text(
-                        text = "$probadoresLibres",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    AnimatedContent(
+                        targetState = probadoresLibres,
+                        transitionSpec = {
+                            (slideInVertically { it } + fadeIn()).togetherWith(slideOutVertically { -it } + fadeOut())
+                        },
+                        label = "ProbadoresLibresAnimation"
+                    ) { count ->
+                        Text(
+                            text = "$count",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = "En Fila", fontSize = 12.sp)
-                    Text(
-                        text = "$personasEnFila",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    AnimatedContent(
+                        targetState = personasEnFila,
+                        transitionSpec = {
+                            (slideInVertically { it } + fadeIn()).togetherWith(slideOutVertically { -it } + fadeOut())
+                        },
+                        label = "PersonasEnFilaAnimation"
+                    ) { count ->
+                        Text(
+                            text = "$count",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = "Tiempo Est.", fontSize = 12.sp)
-                    Text(
-                        text = "~ $tiempoEstimado min",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    AnimatedContent(
+                        targetState = tiempoEstimado,
+                        transitionSpec = {
+                            (slideInVertically { it } + fadeIn()).togetherWith(slideOutVertically { -it } + fadeOut())
+                        },
+                        label = "TiempoEstimadoAnimation"
+                    ) { tiempo ->
+                        Text(
+                            text = "~ $tiempo min",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
 
-        // Si el cliente ya tiene un turno activo, muestra una tarjeta informativa
-        if (miTurnoActivo != null) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Turno Activo en Espera",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Ya posees el turno ${miTurnoActivo.numeroTurno} en la posición #$posicionMiTurno.",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Debes ser atendido antes de poder solicitar un nuevo turno.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                    )
+        // Si el cliente ya tiene un turno activo, muestra una tarjeta informativa animada
+        AnimatedVisibility(
+            visible = miTurnoActivo != null,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            miTurnoActivo?.let { turno ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.HourglassTop,
+                            contentDescription = "Turno Pendiente",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .padding(end = 12.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "Turno Activo en Espera",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Ya posees el turno ${turno.numeroTurno} en la posición #$posicionMiTurno.",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Debes ser atendido antes de poder solicitar un nuevo turno.",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -140,20 +250,26 @@ fun ClienteScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                turnoMensaje?.let { (exito, msg) ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (exito) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Text(
-                            text = msg,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(12.dp)
-                        )
+                AnimatedVisibility(
+                    visible = turnoMensaje != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    turnoMensaje?.let { (exito, msg) ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (exito) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Text(
+                                text = msg,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
                     }
                 }
 
@@ -208,8 +324,18 @@ fun ClienteScreen(
                                 if (exito) {
                                     cantidadPrendasText = ""
                                     esPreferente = false
+                                    // Notificación y vibración al registrar turno exitosamente
+                                    NotificationHelper.enviarNotificacion(
+                                        context = context,
+                                        titulo = "¡Turno Solicitado!",
+                                        mensaje = "Se ha generado tu turno con éxito. Revisa tu posición en la fila."
+                                    )
+                                } else {
+                                    NotificationHelper.vibrar(context, 400L)
                                 }
                             }
+                        } else {
+                            NotificationHelper.vibrar(context, 200L)
                         }
                     },
                     enabled = miTurnoActivo == null,
@@ -231,12 +357,14 @@ fun ClienteScreen(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            itemsIndexed(turnosEnEspera) { index, turno ->
-                ItemTurno(
-                    turno = turno,
-                    lugar = index + 1,
-                    esMiTurno = turno.id == miTurnoActivo?.id
-                )
+            itemsIndexed(turnosEnEspera, key = { _, turno -> turno.id }) { index, turno ->
+                Box(modifier = Modifier.animateItem()) {
+                    ItemTurno(
+                        turno = turno,
+                        lugar = index + 1,
+                        esMiTurno = turno.id == miTurnoActivo?.id
+                    )
+                }
             }
         }
     }
@@ -244,9 +372,21 @@ fun ClienteScreen(
 
 @Composable
 private fun ItemTurno(turno: TurnoEntity, lugar: Int, esMiTurno: Boolean) {
+    val targetBackgroundColor = if (esMiTurno) {
+        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    val animatedBgColor by animateColorAsState(
+        targetValue = targetBackgroundColor,
+        animationSpec = tween(durationMillis = 400),
+        label = "TurnoColorAnimation"
+    )
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = if (esMiTurno) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)) else CardDefaults.cardColors(),
+        colors = CardDefaults.cardColors(containerColor = animatedBgColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(

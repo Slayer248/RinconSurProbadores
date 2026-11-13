@@ -1,6 +1,8 @@
 package com.rinconsur.probadores.ui.asistente
 
 import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,6 +10,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -19,13 +26,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rinconsur.probadores.data.local.entities.ProbadorEntity
 import com.rinconsur.probadores.data.local.entities.TurnoEntity
 
 @Composable
 fun AsistenteScreen(
     username: String,
-    viewModel: AsistenteViewModel
+    viewModel: AsistenteViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var currentUsernameState by remember(username) { mutableStateOf(username) }
@@ -103,23 +111,53 @@ fun AsistenteScreen(
             }
 
             items(probadores, key = { it.codigo }) { probador ->
-                ItemProbador(
-                    probador = probador,
-                    onCambiarEstado = { p, nuevoEstado ->
-                        viewModel.cambiarEstadoProbador(p, nuevoEstado)
-                    }
-                )
+                Box(modifier = Modifier.animateItem()) {
+                    ItemProbador(
+                        probador = probador,
+                        onCambiarEstado = { p, nuevoEstado ->
+                            viewModel.cambiarEstadoProbador(p, nuevoEstado)
+                            com.rinconsur.probadores.utils.NotificationHelper.enviarNotificacion(
+                                context = context,
+                                titulo = if (nuevoEstado == "LIBRE") "¡Probador Liberado!" else "Estado de Probador",
+                                mensaje = "El probador ${p.codigo} cambió su estado a $nuevoEstado"
+                            )
+                        }
+                    )
+                }
             }
 
             // Sección Fila de Espera
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Fila de Espera (${turnosEnEspera.size})",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Fila de Espera",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+
+                    AnimatedContent(
+                        targetState = turnosEnEspera.size,
+                        transitionSpec = {
+                            (slideInVertically { height -> height } + fadeIn()).togetherWith(
+                                slideOutVertically { height -> -height } + fadeOut()
+                            )
+                        },
+                        label = "FilaCountAnimation"
+                    ) { count ->
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            Text(text = "$count en espera", modifier = Modifier.padding(4.dp))
+                        }
+                    }
+                }
             }
 
             if (turnosEnEspera.isEmpty()) {
@@ -143,8 +181,10 @@ fun AsistenteScreen(
                     }
                 }
             } else {
-                itemsIndexed(turnosEnEspera) { index, turno ->
-                    ItemTurnoAsistente(turno = turno, lugar = index + 1)
+                itemsIndexed(turnosEnEspera, key = { _, turno -> turno.id }) { index, turno ->
+                    Box(modifier = Modifier.animateItem()) {
+                        ItemTurnoAsistente(turno = turno, lugar = index + 1)
+                    }
                 }
             }
         }
@@ -306,8 +346,23 @@ private fun ItemProbador(
         else -> "LIBRE"
     }
 
+    // Animación fluida de color de contenedor según el estado del probador
+    val targetContainerColor = when (probador.estado) {
+        "LIBRE" -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        "OCUPADO" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
+        "FUERA_SERVICIO" -> MaterialTheme.colorScheme.surfaceVariant
+        else -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)
+    }
+
+    val animatedContainerColor by animateColorAsState(
+        targetValue = targetContainerColor,
+        animationSpec = tween(durationMillis = 400),
+        label = "ProbadorColorAnimation"
+    )
+
     Card(
         modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = animatedContainerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -317,23 +372,49 @@ private fun ItemProbador(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Probador: ${probador.codigo}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = probador.estado,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = when (probador.estado) {
-                        "LIBRE" -> MaterialTheme.colorScheme.primary
-                        "OCUPADO" -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.tertiary
+
+                // Transición animada del estado con íconos descriptivos
+                AnimatedContent(
+                    targetState = probador.estado,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(300)) + slideInVertically { it / 2 })
+                            .togetherWith(fadeOut(animationSpec = tween(300)) + slideOutVertically { -it / 2 })
+                    },
+                    label = "EstadoTextAnimation"
+                ) { estadoTarget ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val (icon, color) = when (estadoTarget) {
+                            "LIBRE" -> Pair(Icons.Filled.CheckCircle, MaterialTheme.colorScheme.primary)
+                            "OCUPADO" -> Pair(Icons.Filled.Person, MaterialTheme.colorScheme.error)
+                            "FUERA_SERVICIO" -> Pair(Icons.Filled.Lock, MaterialTheme.colorScheme.outline)
+                            else -> Pair(Icons.Filled.CleaningServices, MaterialTheme.colorScheme.tertiary)
+                        }
+
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = estadoTarget,
+                            tint = color,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .padding(end = 4.dp)
+                        )
+
+                        Text(
+                            text = estadoTarget,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = color
+                        )
                     }
-                )
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
