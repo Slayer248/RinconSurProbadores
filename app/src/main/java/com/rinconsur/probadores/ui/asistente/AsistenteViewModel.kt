@@ -31,19 +31,96 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
     val usuariosLiveData: LiveData<List<UsuarioEntity>> =
         usuarioDao.obtenerTodosUsuarios().asLiveData(Dispatchers.IO)
 
-    fun registrarTurno(nombreCliente: String, cantidadPrendas: Int, esPreferente: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val ultimoNumero = turnoDao.obtenerUltimoNumero() ?: 1000
-            val nuevoNumeroTurno = "T-${ultimoNumero + 1}"
+    // ---------------------------------------------------------------------
+    // Lógica de Validación de Entradas
+    // ---------------------------------------------------------------------
 
-            val nuevoTurno = TurnoEntity(
-                numeroTurno = nuevoNumeroTurno,
-                nombreCliente = nombreCliente,
-                cantidadPrendas = cantidadPrendas,
-                esPreferente = esPreferente,
-                estado = "EN_ESPERA"
-            )
-            turnoDao.insertarTurno(nuevoTurno)
+    fun validarNombreInvitado(nombre: String): String? {
+        val clean = nombre.trim()
+        return when {
+            clean.isEmpty() -> "El nombre no puede estar vacío"
+            clean.length < 3 -> "El nombre de invitado debe tener al menos 3 letras"
+            else -> null
+        }
+    }
+
+    fun validarUsername(username: String): String? {
+        val clean = username.trim()
+        return when {
+            clean.isEmpty() -> "El nombre de usuario es obligatorio"
+            clean.length < 3 -> "El usuario debe tener al menos 3 caracteres"
+            else -> null
+        }
+    }
+
+    fun validarContrasenaLogin(password: String): String? {
+        val clean = password.trim()
+        return when {
+            clean.isEmpty() -> "La contraseña es obligatoria"
+            clean.length < 4 -> "La contraseña debe tener al menos 4 caracteres"
+            else -> null
+        }
+    }
+
+    fun validarCantidadPrendas(prendasText: String): String? {
+        val clean = prendasText.trim()
+        val prendas = clean.toIntOrNull()
+        return when {
+            clean.isEmpty() -> "Por favor ingresa la cantidad de prendas"
+            prendas == null || prendas < 1 || prendas > 6 -> "La cantidad de prendas debe ser entre 1 y 6"
+            else -> null
+        }
+    }
+
+    fun validarNombreCompleto(nombre: String): String? {
+        val clean = nombre.trim()
+        return when {
+            clean.isEmpty() -> "El nombre completo es obligatorio"
+            clean.length < 3 -> "El nombre debe tener al menos 3 caracteres"
+            else -> null
+        }
+    }
+
+    fun validarCorreo(correo: String): String? {
+        val clean = correo.trim()
+        return when {
+            clean.isEmpty() -> "El correo electrónico es obligatorio"
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(clean).matches() -> "Ingresa un correo válido (ej: usuario@correo.com)"
+            else -> null
+        }
+    }
+
+    fun registrarTurno(
+        nombreCliente: String,
+        cantidadPrendas: Int,
+        esPreferente: Boolean,
+        onResultado: (exito: Boolean, mensaje: String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val (exito, mensaje) = withContext(Dispatchers.IO) {
+                val cleanNombre = nombreCliente.trim()
+                val turnoActivo = turnoDao.obtenerTurnoActivoCliente(cleanNombre)
+                if (turnoActivo != null) {
+                    Pair(
+                        false,
+                        "Ya tienes un turno activo en espera (${turnoActivo.numeroTurno}). Debes ser atendido antes de solicitar otro."
+                    )
+                } else {
+                    val ultimoNumero = turnoDao.obtenerUltimoNumero() ?: 1000
+                    val nuevoNumeroTurno = "T-${ultimoNumero + 1}"
+
+                    val nuevoTurno = TurnoEntity(
+                        numeroTurno = nuevoNumeroTurno,
+                        nombreCliente = cleanNombre,
+                        cantidadPrendas = cantidadPrendas,
+                        esPreferente = esPreferente,
+                        estado = "EN_ESPERA"
+                    )
+                    turnoDao.insertarTurno(nuevoTurno)
+                    Pair(true, "¡Turno $nuevoNumeroTurno registrado con éxito!")
+                }
+            }
+            onResultado(exito, mensaje)
         }
     }
 
@@ -129,7 +206,7 @@ class AsistenteViewModel(application: Application) : AndroidViewModel(applicatio
                 try {
                     usuarioDao.insertarUsuario(nuevoUsuario)
                     null
-                } catch (e: SQLiteConstraintException) {
+                } catch (_: SQLiteConstraintException) {
                     "El nombre de usuario '$cleanUser' ya se encuentra registrado"
                 }
             }

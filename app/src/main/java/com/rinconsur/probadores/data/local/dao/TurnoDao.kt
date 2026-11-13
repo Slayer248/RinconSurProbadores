@@ -22,6 +22,9 @@ interface TurnoDao {
     @Query("SELECT * FROM turnos WHERE estado = 'EN_ESPERA' ORDER BY esPreferente DESC, id ASC LIMIT 1")
     suspend fun obtenerSiguienteTurnoEnEspera(): TurnoEntity?
 
+    @Query("SELECT * FROM turnos WHERE LOWER(nombreCliente) = LOWER(:nombreCliente) AND estado = 'EN_ESPERA' LIMIT 1")
+    suspend fun obtenerTurnoActivoCliente(nombreCliente: String): TurnoEntity?
+
     @Query("UPDATE turnos SET estado = :nuevoEstado WHERE id = :turnoId")
     suspend fun actualizarEstadoTurno(turnoId: Long, nuevoEstado: String)
 }

@@ -1,15 +1,16 @@
 package com.rinconsur.probadores.ui.auth
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -17,6 +18,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rinconsur.probadores.ui.asistente.AsistenteViewModel
+import com.rinconsur.probadores.utils.PasswordValidator
 
 @Composable
 fun LoginScreen(
@@ -25,14 +27,25 @@ fun LoginScreen(
     onNavigateToAsistente: (String) -> Unit,
     onNavigateToAdmin: (String) -> Unit
 ) {
-    val context = LocalContext.current
     var nombreInvitado by remember { mutableStateOf("") }
+    var nombreInvitadoError by remember { mutableStateOf<String?>(null) }
+
     var username by remember { mutableStateOf("") }
+    var usernameError by remember { mutableStateOf<String?>(null) }
+
     var password by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+
+    var loginGeneralError by remember { mutableStateOf<String?>(null) }
 
     var mostrarDialogRecuperar by remember { mutableStateOf(false) }
     var correoRecuperacion by remember { mutableStateOf("") }
+    var correoRecuperacionError by remember { mutableStateOf<String?>(null) }
+
     var nuevaPassword by remember { mutableStateOf("") }
+    var nuevaPasswordError by remember { mutableStateOf<String?>(null) }
+
+    var mensajeRecuperacion by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
     Column(
         modifier = Modifier
@@ -74,12 +87,17 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = nombreInvitado,
                     onValueChange = { input ->
-                        // Filtro solo letras y espacios
                         if (input.all { it.isLetter() || it.isWhitespace() }) {
                             nombreInvitado = input
+                            nombreInvitadoError = null
                         }
                     },
                     label = { Text("Tu Nombre") },
+                    isError = nombreInvitadoError != null,
+                    supportingText = nombreInvitadoError?.let { err -> { Text(err) } },
+                    trailingIcon = if (nombreInvitadoError != null) {
+                        { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                    } else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -88,16 +106,11 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        val nombreClean = nombreInvitado.trim()
-                        if (nombreClean.isEmpty()) {
-                            Toast.makeText(context, "Ingresa tu nombre para continuar", Toast.LENGTH_SHORT).show()
-                            return@Button
+                        val error = viewModel.validarNombreInvitado(nombreInvitado)
+                        nombreInvitadoError = error
+                        if (error == null) {
+                            onNavigateToCliente(nombreInvitado.trim())
                         }
-                        if (nombreClean.length < 3) {
-                            Toast.makeText(context, "El nombre de invitado debe tener mínimo 3 letras", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        onNavigateToCliente(nombreClean)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -119,10 +132,45 @@ fun LoginScreen(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
+                if (loginGeneralError != null) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Warning,
+                                contentDescription = "Alerta",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = loginGeneralError!!,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = username,
-                    onValueChange = { username = it },
+                    onValueChange = {
+                        username = it
+                        usernameError = null
+                        loginGeneralError = null
+                    },
                     label = { Text("Usuario") },
+                    isError = usernameError != null,
+                    supportingText = usernameError?.let { err -> { Text(err) } },
+                    trailingIcon = if (usernameError != null) {
+                        { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                    } else null,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text,
@@ -135,8 +183,17 @@ fun LoginScreen(
 
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = {
+                        password = it
+                        passwordError = null
+                        loginGeneralError = null
+                    },
                     label = { Text("Contraseña") },
+                    isError = passwordError != null,
+                    supportingText = passwordError?.let { err -> { Text(err) } },
+                    trailingIcon = if (passwordError != null) {
+                        { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                    } else null,
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(
@@ -150,31 +207,23 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        val userClean = username.trim()
-                        val passClean = password.trim()
+                        val errUser = viewModel.validarUsername(username)
+                        val errPass = viewModel.validarContrasenaLogin(password)
 
-                        if (userClean.isEmpty() || passClean.isEmpty()) {
-                            Toast.makeText(context, "Completa todos los campos", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (userClean.length < 3) {
-                            Toast.makeText(context, "El usuario debe tener mínimo 3 letras", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (passClean.length < 4) {
-                            Toast.makeText(context, "La contraseña debe tener mínimo 4 caracteres", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
+                        usernameError = errUser
+                        passwordError = errPass
 
-                        viewModel.autenticar(userClean, passClean) { rol ->
-                            when (rol) {
-                                "ADMIN" -> onNavigateToAdmin(userClean)
-                                "ASISTENTE" -> onNavigateToAsistente(userClean)
-                                AsistenteViewModel.ROL_BLOQUEADO -> {
-                                    Toast.makeText(context, "Tu cuenta está bloqueada. Contacta al administrador", Toast.LENGTH_LONG).show()
-                                }
-                                else -> {
-                                    Toast.makeText(context, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
+                        if (errUser == null && errPass == null) {
+                            viewModel.autenticar(username, password) { rol ->
+                                when (rol) {
+                                    "ADMIN" -> onNavigateToAdmin(username.trim())
+                                    "ASISTENTE" -> onNavigateToAsistente(username.trim())
+                                    AsistenteViewModel.ROL_BLOQUEADO -> {
+                                        loginGeneralError = "Tu cuenta se encuentra bloqueada. Contacta al administrador."
+                                    }
+                                    else -> {
+                                        loginGeneralError = "Usuario o contraseña incorrectos."
+                                    }
                                 }
                             }
                         }
@@ -187,7 +236,14 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 TextButton(
-                    onClick = { mostrarDialogRecuperar = true },
+                    onClick = {
+                        correoRecuperacion = ""
+                        nuevaPassword = ""
+                        correoRecuperacionError = null
+                        nuevaPasswordError = null
+                        mensajeRecuperacion = null
+                        mostrarDialogRecuperar = true
+                    },
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
                     Text("¿Olvidaste tu contraseña?")
@@ -209,10 +265,35 @@ fun LoginScreen(
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
+                    mensajeRecuperacion?.let { (exito, msg) ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (exito) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Text(
+                                text = msg,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
                     OutlinedTextField(
                         value = correoRecuperacion,
-                        onValueChange = { correoRecuperacion = it },
+                        onValueChange = {
+                            correoRecuperacion = it
+                            correoRecuperacionError = null
+                        },
                         label = { Text("Correo Electrónico") },
+                        isError = correoRecuperacionError != null,
+                        supportingText = correoRecuperacionError?.let { err -> { Text(err) } },
+                        trailingIcon = if (correoRecuperacionError != null) {
+                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                        } else null,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         modifier = Modifier.fillMaxWidth()
@@ -222,8 +303,16 @@ fun LoginScreen(
 
                     OutlinedTextField(
                         value = nuevaPassword,
-                        onValueChange = { nuevaPassword = it },
+                        onValueChange = {
+                            nuevaPassword = it
+                            nuevaPasswordError = null
+                        },
                         label = { Text("Nueva Contraseña") },
+                        isError = nuevaPasswordError != null,
+                        supportingText = nuevaPasswordError?.let { err -> { Text(err) } },
+                        trailingIcon = if (nuevaPasswordError != null) {
+                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                        } else null,
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -234,29 +323,19 @@ fun LoginScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val mailClean = correoRecuperacion.trim()
-                        val passClean = nuevaPassword.trim()
+                        val errMail = viewModel.validarCorreo(correoRecuperacion)
+                        val errPass = PasswordValidator.validarContrasena(nuevaPassword.trim())
 
-                        if (mailClean.isEmpty() || passClean.isEmpty()) {
-                            Toast.makeText(context, "Ingresa el correo y la nueva contraseña", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(mailClean).matches()) {
-                            Toast.makeText(context, "Ingresa un correo electrónico válido", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        val errPass = com.rinconsur.probadores.utils.PasswordValidator.validarContrasena(passClean)
-                        if (errPass != null) {
-                            Toast.makeText(context, errPass, Toast.LENGTH_LONG).show()
-                            return@Button
-                        }
+                        correoRecuperacionError = errMail
+                        nuevaPasswordError = errPass
 
-                        viewModel.recuperarContrasena(mailClean, passClean) { exito, mensaje ->
-                            Toast.makeText(context, mensaje, Toast.LENGTH_LONG).show()
-                            if (exito) {
-                                correoRecuperacion = ""
-                                nuevaPassword = ""
-                                mostrarDialogRecuperar = false
+                        if (errMail == null && errPass == null) {
+                            viewModel.recuperarContrasena(correoRecuperacion, nuevaPassword) { exito, mensaje ->
+                                mensajeRecuperacion = Pair(exito, mensaje)
+                                if (exito) {
+                                    correoRecuperacion = ""
+                                    nuevaPassword = ""
+                                }
                             }
                         }
                     }
@@ -266,13 +345,9 @@ fun LoginScreen(
             },
             dismissButton = {
                 OutlinedButton(
-                    onClick = {
-                        correoRecuperacion = ""
-                        nuevaPassword = ""
-                        mostrarDialogRecuperar = false
-                    }
+                    onClick = { mostrarDialogRecuperar = false }
                 ) {
-                    Text("Cancelar")
+                    Text("Cerrar")
                 }
             }
         )
