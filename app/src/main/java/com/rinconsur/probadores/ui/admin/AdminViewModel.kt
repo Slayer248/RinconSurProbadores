@@ -3,39 +3,40 @@ package com.rinconsur.probadores.ui.admin
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.rinconsur.probadores.data.local.AppDatabase
 import com.rinconsur.probadores.data.local.entities.ProbadorEntity
 import com.rinconsur.probadores.data.local.entities.UsuarioEntity
-import com.rinconsur.probadores.data.repository.ProbadorRepository
-import com.rinconsur.probadores.data.repository.ProbadorRepositoryImpl
-import com.rinconsur.probadores.data.repository.UsuarioRepository
-import com.rinconsur.probadores.data.repository.UsuarioRepositoryImpl
-import kotlinx.coroutines.Dispatchers
+import com.rinconsur.probadores.data.repository.*
+import com.rinconsur.probadores.utils.SessionManager
 import kotlinx.coroutines.launch
 
 class AdminViewModel @JvmOverloads constructor(
     application: Application,
-    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(
-        AppDatabase.getDatabase(application).usuarioDao()
-    ),
-    private val probadorRepository: ProbadorRepository = ProbadorRepositoryImpl(
-        AppDatabase.getDatabase(application).probadorDao(),
-        AppDatabase.getDatabase(application).turnoDao()
-    )
+    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(),
+    private val probadorRepository: ProbadorRepository = ProbadorRepositoryImpl()
 ) : AndroidViewModel(application) {
 
-    val usuariosLiveData: LiveData<List<UsuarioEntity>> =
-        usuarioRepository.obtenerTodosUsuarios().asLiveData(Dispatchers.IO)
+    private val _usuarios = MutableLiveData<List<UsuarioEntity>>(emptyList())
+    val usuariosLiveData: LiveData<List<UsuarioEntity>> = _usuarios
 
-    val probadoresLiveData: LiveData<List<ProbadorEntity>> =
-        probadorRepository.obtenerTodosProbadores().asLiveData(Dispatchers.IO)
+    private val _probadores = MutableLiveData<List<ProbadorEntity>>(emptyList())
+    val probadoresLiveData: LiveData<List<ProbadorEntity>> = _probadores
+
+    init {
+        refrescarTodo()
+    }
+
+    fun refrescarTodo() {
+        viewModelScope.launch {
+            _usuarios.value = usuarioRepository.obtenerTodosUsuarios()
+            _probadores.value = probadorRepository.obtenerTodosProbadores()
+        }
+    }
 
     fun obtenerUsuario(username: String, onResultado: (UsuarioEntity?) -> Unit) {
         viewModelScope.launch {
-            val usuario = usuarioRepository.obtenerUsuarioPorUsername(username)
-            onResultado(usuario)
+            onResultado(usuarioRepository.obtenerUsuarioPorUsername(username))
         }
     }
 
@@ -84,6 +85,7 @@ class AdminViewModel @JvmOverloads constructor(
                 nuevoUsername = nuevoUsername,
                 nuevaPassword = nuevaPassword
             )
+            if (exito) refrescarTodo()
             onResultado(exito, mensaje, updatedUser)
         }
     }
@@ -98,6 +100,7 @@ class AdminViewModel @JvmOverloads constructor(
     ) {
         viewModelScope.launch {
             val error = usuarioRepository.crearUsuario(nombre, correo, username, pass, rol)
+            if (error == null) refrescarTodo()
             onResultado(error)
         }
     }
@@ -114,20 +117,25 @@ class AdminViewModel @JvmOverloads constructor(
             val error = usuarioRepository.editarCuenta(
                 username, nuevoNombre, nuevoCorreo, nuevoRol, nuevaPassword
             )
+            if (error == null) refrescarTodo()
             onResultado(error)
         }
     }
 
-    fun eliminarCuenta(username: String, adminActual: String, onResultado: (String?) -> Unit) {
+    fun eliminarCuenta(username: String, @Suppress("UNUSED_PARAMETER") adminActual: String, onResultado: (String?) -> Unit) {
         viewModelScope.launch {
-            val error = usuarioRepository.eliminarCuenta(username, adminActual)
+            val adminId = SessionManager.obtenerEmpleadoId(getApplication()).takeIf { it > 0 }
+            val error = usuarioRepository.eliminarCuenta(username, adminId)
+            if (error == null) refrescarTodo()
             onResultado(error)
         }
     }
 
-    fun cambiarBloqueoCuenta(username: String, bloquear: Boolean, adminActual: String, onResultado: (String?) -> Unit) {
+    fun cambiarBloqueoCuenta(username: String, bloquear: Boolean, @Suppress("UNUSED_PARAMETER") adminActual: String, onResultado: (String?) -> Unit) {
         viewModelScope.launch {
-            val error = usuarioRepository.cambiarBloqueoCuenta(username, bloquear, adminActual)
+            val adminId = SessionManager.obtenerEmpleadoId(getApplication()).takeIf { it > 0 }
+            val error = usuarioRepository.cambiarBloqueoCuenta(username, bloquear, adminId)
+            if (error == null) refrescarTodo()
             onResultado(error)
         }
     }
@@ -135,6 +143,7 @@ class AdminViewModel @JvmOverloads constructor(
     fun crearProbador(codigo: String, esAccesible: Boolean, onResultado: (String?) -> Unit) {
         viewModelScope.launch {
             val error = probadorRepository.crearProbador(codigo, esAccesible)
+            if (error == null) refrescarTodo()
             onResultado(error)
         }
     }
@@ -147,6 +156,7 @@ class AdminViewModel @JvmOverloads constructor(
     ) {
         viewModelScope.launch {
             val error = probadorRepository.cambiarBloqueoProbador(probador, bloquear, motivo)
+            if (error == null) refrescarTodo()
             onResultado(error)
         }
     }
@@ -154,6 +164,7 @@ class AdminViewModel @JvmOverloads constructor(
     fun eliminarProbador(probador: ProbadorEntity, onResultado: (String?) -> Unit) {
         viewModelScope.launch {
             val error = probadorRepository.eliminarProbador(probador)
+            if (error == null) refrescarTodo()
             onResultado(error)
         }
     }

@@ -3,29 +3,31 @@ package com.rinconsur.probadores.ui.auth
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.rinconsur.probadores.data.local.AppDatabase
 import com.rinconsur.probadores.data.local.entities.TurnoEntity
-import com.rinconsur.probadores.data.repository.TurnoRepository
-import com.rinconsur.probadores.data.repository.TurnoRepositoryImpl
-import com.rinconsur.probadores.data.repository.UsuarioRepository
-import com.rinconsur.probadores.data.repository.UsuarioRepositoryImpl
-import kotlinx.coroutines.Dispatchers
+import com.rinconsur.probadores.data.repository.*
+import com.rinconsur.probadores.utils.SessionManager
 import kotlinx.coroutines.launch
 
 class LoginViewModel @JvmOverloads constructor(
     application: Application,
-    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(
-        AppDatabase.getDatabase(application).usuarioDao()
-    ),
-    private val turnoRepository: TurnoRepository = TurnoRepositoryImpl(
-        AppDatabase.getDatabase(application).turnoDao()
-    )
+    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(),
+    private val turnoRepository: TurnoRepository = TurnoRepositoryImpl()
 ) : AndroidViewModel(application) {
 
-    val turnosEnEsperaLiveData: LiveData<List<TurnoEntity>> =
-        turnoRepository.obtenerTurnosPorEstado("EN_ESPERA").asLiveData(Dispatchers.IO)
+    private val _turnosEnEspera = MutableLiveData<List<TurnoEntity>>(emptyList())
+    val turnosEnEsperaLiveData: LiveData<List<TurnoEntity>> = _turnosEnEspera
+
+    init {
+        refrescarTurnos()
+    }
+
+    fun refrescarTurnos() {
+        viewModelScope.launch {
+            _turnosEnEspera.value = turnoRepository.obtenerTurnosPorEstado("EN_ESPERA")
+        }
+    }
 
     fun validarNombreInvitado(nombre: String): String? {
         val clean = nombre.trim()
@@ -88,25 +90,18 @@ class LoginViewModel @JvmOverloads constructor(
         }
     }
 
-    fun autenticar(usernameInput: String, passInput: String, onResultado: (String?) -> Unit) {
+    fun autenticar(usernameInput: String, passInput: String, onResultado: (ResultadoLogin) -> Unit) {
         viewModelScope.launch {
-            val rol = usuarioRepository.autenticar(usernameInput, passInput)
-            onResultado(rol)
+            val resultado = usuarioRepository.autenticar(usernameInput, passInput)
+            if (resultado is ResultadoLogin.Exito) {
+                SessionManager.guardarSesionEmpleado(
+                    context = getApplication(),
+                    id = resultado.usuario.id,
+                    username = resultado.usuario.username,
+                    rol = resultado.usuario.rolNombre
+                )
+            }
+            onResultado(resultado)
         }
-    }
-
-    fun recuperarContrasena(
-        correo: String,
-        nuevaContrasena: String,
-        onResultado: (Boolean, String) -> Unit
-    ) {
-        viewModelScope.launch {
-            val (exito, mensaje) = usuarioRepository.recuperarContrasena(correo, nuevaContrasena)
-            onResultado(exito, mensaje)
-        }
-    }
-
-    companion object {
-        const val ROL_BLOQUEADO = UsuarioRepositoryImpl.ROL_BLOQUEADO
     }
 }

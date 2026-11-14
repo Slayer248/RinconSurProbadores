@@ -3,51 +3,59 @@ package com.rinconsur.probadores.ui.asistente
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.rinconsur.probadores.data.local.AppDatabase
 import com.rinconsur.probadores.data.local.entities.ProbadorEntity
 import com.rinconsur.probadores.data.local.entities.TurnoEntity
 import com.rinconsur.probadores.data.local.entities.UsuarioEntity
-import com.rinconsur.probadores.data.repository.ProbadorRepository
-import com.rinconsur.probadores.data.repository.ProbadorRepositoryImpl
-import com.rinconsur.probadores.data.repository.TurnoRepository
-import com.rinconsur.probadores.data.repository.TurnoRepositoryImpl
-import com.rinconsur.probadores.data.repository.UsuarioRepository
-import com.rinconsur.probadores.data.repository.UsuarioRepositoryImpl
-import kotlinx.coroutines.Dispatchers
+import com.rinconsur.probadores.data.repository.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class AsistenteViewModel @JvmOverloads constructor(
     application: Application,
-    private val probadorRepository: ProbadorRepository = ProbadorRepositoryImpl(
-        AppDatabase.getDatabase(application).probadorDao(),
-        AppDatabase.getDatabase(application).turnoDao()
-    ),
-    turnoRepository: TurnoRepository = TurnoRepositoryImpl(
-        AppDatabase.getDatabase(application).turnoDao()
-    ),
-    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(
-        AppDatabase.getDatabase(application).usuarioDao()
-    )
+    private val probadorRepository: ProbadorRepository = ProbadorRepositoryImpl(),
+    private val turnoRepository: TurnoRepository = TurnoRepositoryImpl(),
+    private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl()
 ) : AndroidViewModel(application) {
 
-    val probadoresLiveData: LiveData<List<ProbadorEntity>> =
-        probadorRepository.obtenerTodosProbadores().asLiveData(Dispatchers.IO)
+    private val _probadores = MutableLiveData<List<ProbadorEntity>>(emptyList())
+    val probadoresLiveData: LiveData<List<ProbadorEntity>> = _probadores
 
-    val turnosEnEsperaLiveData: LiveData<List<TurnoEntity>> =
-        turnoRepository.obtenerTurnosPorEstado("EN_ESPERA").asLiveData(Dispatchers.IO)
+    private val _turnosEnEspera = MutableLiveData<List<TurnoEntity>>(emptyList())
+    val turnosEnEsperaLiveData: LiveData<List<TurnoEntity>> = _turnosEnEspera
+
+    init {
+        iniciarAutoRefresco()
+    }
+
+    private fun iniciarAutoRefresco() {
+        viewModelScope.launch {
+            while (isActive) {
+                refrescarDatos()
+                delay(10_000L) // Refresco cada 10 segundos
+            }
+        }
+    }
+
+    fun refrescarDatos() {
+        viewModelScope.launch {
+            _probadores.value = probadorRepository.obtenerTodosProbadores()
+            _turnosEnEspera.value = turnoRepository.obtenerTurnosPorEstado("EN_ESPERA")
+        }
+    }
 
     fun cambiarEstadoProbador(probador: ProbadorEntity, nuevoEstado: String) {
         viewModelScope.launch {
             probadorRepository.cambiarEstadoProbador(probador, nuevoEstado)
+            refrescarDatos()
         }
     }
 
     fun obtenerUsuario(username: String, onResultado: (UsuarioEntity?) -> Unit) {
         viewModelScope.launch {
-            val usuario = usuarioRepository.obtenerUsuarioPorUsername(username)
-            onResultado(usuario)
+            onResultado(usuarioRepository.obtenerUsuarioPorUsername(username))
         }
     }
 

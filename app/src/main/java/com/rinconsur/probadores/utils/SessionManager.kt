@@ -7,29 +7,53 @@ object SessionManager {
 
     private const val PREF_NAME = "rincon_sur_session"
     private const val KEY_GUEST_NAME = "active_guest_name"
+    private const val KEY_USER_ID = "logged_user_id"
+    private const val KEY_USERNAME = "logged_username"
+    private const val KEY_USER_ROL = "logged_user_rol"
 
     private fun getPreferences(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 
-    /**
-     * Guarda el nombre del cliente/invitado activo en SharedPreferences.
-     */
+    // --- SESIÓN EMPLEADOS ---
+    fun guardarSesionEmpleado(context: Context, id: Long, username: String, rol: String) {
+        getPreferences(context).edit()
+            .putLong(KEY_USER_ID, id)
+            .putString(KEY_USERNAME, username.trim())
+            .putString(KEY_USER_ROL, rol)
+            .apply()
+    }
+
+    fun obtenerEmpleadoId(context: Context): Long {
+        return getPreferences(context).getLong(KEY_USER_ID, -1L)
+    }
+
+    fun obtenerEmpleadoUsername(context: Context): String? {
+        return getPreferences(context).getString(KEY_USERNAME, null)
+    }
+
+    fun obtenerEmpleadoRol(context: Context): String? {
+        return getPreferences(context).getString(KEY_USER_ROL, null)
+    }
+
+    fun cerrarSesionEmpleado(context: Context) {
+        getPreferences(context).edit()
+            .remove(KEY_USER_ID)
+            .remove(KEY_USERNAME)
+            .remove(KEY_USER_ROL)
+            .apply()
+    }
+
+    // --- SESIÓN INVITADOS ---
     fun guardarUltimoInvitado(context: Context, nombre: String) {
         getPreferences(context).edit().putString(KEY_GUEST_NAME, nombre.trim()).apply()
     }
 
-    /**
-     * Obtiene el nombre del último cliente/invitado guardado en el dispositivo.
-     */
     fun obtenerUltimoInvitado(context: Context): String? {
         val nombre = getPreferences(context).getString(KEY_GUEST_NAME, null)
         return if (!nombre.isNullOrBlank()) nombre.trim() else null
     }
 
-    /**
-     * Limpia la sesión guardada del invitado en el dispositivo.
-     */
     fun limpiarUltimoInvitado(context: Context) {
         getPreferences(context).edit().remove(KEY_GUEST_NAME).apply()
     }

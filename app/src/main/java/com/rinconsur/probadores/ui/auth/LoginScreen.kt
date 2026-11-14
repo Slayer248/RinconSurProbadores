@@ -21,7 +21,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.rinconsur.probadores.utils.PasswordValidator
+import com.rinconsur.probadores.data.repository.ResultadoLogin
 import com.rinconsur.probadores.utils.SessionManager
 
 @Composable
@@ -59,15 +59,7 @@ fun LoginScreen(
     var passwordError by remember { mutableStateOf<String?>(null) }
 
     var loginGeneralError by remember { mutableStateOf<String?>(null) }
-
-    var mostrarDialogRecuperar by remember { mutableStateOf(false) }
-    var correoRecuperacion by remember { mutableStateOf("") }
-    var correoRecuperacionError by remember { mutableStateOf<String?>(null) }
-
-    var nuevaPassword by remember { mutableStateOf("") }
-    var nuevaPasswordError by remember { mutableStateOf<String?>(null) }
-
-    var mensajeRecuperacion by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    var cargandoLogin by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -179,7 +171,6 @@ fun LoginScreen(
                         if (basicError == null) {
                             val cleanName = nombreInvitado.trim()
                             viewModel.validarInvitadoDisponible(cleanName) { dbError ->
-                                // Si coincide con el invitado recordado y tiene un turno activo propio, permitir ingresar
                                 val esMismoInvitadoRecordado = cleanName.equals(ultimoInvitadoRecordado, ignoreCase = true) && turnoRecordado != null
                                 if (dbError == null || esMismoInvitadoRecordado) {
                                     SessionManager.guardarUltimoInvitado(context, cleanName)
@@ -250,6 +241,7 @@ fun LoginScreen(
                         { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
                     } else null,
                     singleLine = true,
+                    enabled = !cargandoLogin,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text,
                         capitalization = KeyboardCapitalization.None
@@ -273,6 +265,7 @@ fun LoginScreen(
                         { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
                     } else null,
                     singleLine = true,
+                    enabled = !cargandoLogin,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
@@ -284,6 +277,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Button(
+                    enabled = !cargandoLogin,
                     onClick = {
                         val errUser = viewModel.validarUsername(username)
                         val errPass = viewModel.validarContrasenaLogin(password)
@@ -292,15 +286,19 @@ fun LoginScreen(
                         passwordError = errPass
 
                         if (errUser == null && errPass == null) {
-                            viewModel.autenticar(username, password) { rol ->
-                                when (rol) {
-                                    "ADMIN" -> onNavigateToAdmin(username.trim())
-                                    "ASISTENTE" -> onNavigateToAsistente(username.trim())
-                                    LoginViewModel.ROL_BLOQUEADO -> {
-                                        loginGeneralError = "Tu cuenta se encuentra bloqueada. Contacta al administrador."
+                            cargandoLogin = true
+                            viewModel.autenticar(username, password) { res ->
+                                cargandoLogin = false
+                                when (res) {
+                                    is ResultadoLogin.Exito -> {
+                                        when (res.usuario.rolNombre) {
+                                            "ADMIN" -> onNavigateToAdmin(res.usuario.username)
+                                            "ASISTENTE" -> onNavigateToAsistente(res.usuario.username)
+                                            else -> loginGeneralError = "Rol no autorizado."
+                                        }
                                     }
-                                    else -> {
-                                        loginGeneralError = "Usuario o contraseña incorrectos."
+                                    is ResultadoLogin.Error -> {
+                                        loginGeneralError = res.mensaje
                                     }
                                 }
                             }
@@ -308,126 +306,9 @@ fun LoginScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Iniciar Sesión")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                TextButton(
-                    onClick = {
-                        correoRecuperacion = ""
-                        nuevaPassword = ""
-                        correoRecuperacionError = null
-                        nuevaPasswordError = null
-                        mensajeRecuperacion = null
-                        mostrarDialogRecuperar = true
-                    },
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text("¿Olvidaste tu contraseña?")
+                    Text(if (cargandoLogin) "Conectando..." else "Iniciar Sesión")
                 }
             }
         }
-    }
-
-    // Diálogo para recuperación de contraseña
-    if (mostrarDialogRecuperar) {
-        AlertDialog(
-            onDismissRequest = { mostrarDialogRecuperar = false },
-            title = { Text("Recuperar Contraseña") },
-            text = {
-                Column {
-                    Text(
-                        text = "Ingresa el correo electrónico asociado a tu cuenta y la nueva contraseña.",
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-
-                    mensajeRecuperacion?.let { (exito, msg) ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (exito) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
-                            )
-                        ) {
-                            Text(
-                                text = msg,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = correoRecuperacion,
-                        onValueChange = {
-                            correoRecuperacion = it
-                            correoRecuperacionError = null
-                        },
-                        label = { Text("Correo Electrónico") },
-                        isError = correoRecuperacionError != null,
-                        supportingText = correoRecuperacionError?.let { err -> { Text(err) } },
-                        trailingIcon = if (correoRecuperacionError != null) {
-                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
-                        } else null,
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = nuevaPassword,
-                        onValueChange = {
-                            nuevaPassword = it
-                            nuevaPasswordError = null
-                        },
-                        label = { Text("Nueva Contraseña") },
-                        isError = nuevaPasswordError != null,
-                        supportingText = nuevaPasswordError?.let { err -> { Text(err) } },
-                        trailingIcon = if (nuevaPasswordError != null) {
-                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
-                        } else null,
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val errMail = viewModel.validarCorreo(correoRecuperacion)
-                        val errPass = PasswordValidator.validarContrasena(nuevaPassword.trim())
-
-                        correoRecuperacionError = errMail
-                        nuevaPasswordError = errPass
-
-                        if (errMail == null && errPass == null) {
-                            viewModel.recuperarContrasena(correoRecuperacion, nuevaPassword) { exito, mensaje ->
-                                mensajeRecuperacion = Pair(exito, mensaje)
-                                if (exito) {
-                                    correoRecuperacion = ""
-                                    nuevaPassword = ""
-                                }
-                            }
-                        }
-                    }
-                ) {
-                    Text("Cambiar Contraseña")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { mostrarDialogRecuperar = false }
-                ) {
-                    Text("Cerrar")
-                }
-            }
-        )
     }
 }

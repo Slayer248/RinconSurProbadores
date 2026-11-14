@@ -41,14 +41,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val db = AppDatabase.getDatabase(this)
-        lifecycleScope.launch(Dispatchers.IO) {
-            DataInitializer.inicializarDatosSiEstaVacio(
-                usuarioDao = db.usuarioDao(),
-                probadorDao = db.probadorDao(),
-            )
-        }
-
         setContent {
             RinconSurTheme {
                 val navController = rememberNavController()
