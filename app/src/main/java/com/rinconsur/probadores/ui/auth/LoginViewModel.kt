@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.rinconsur.probadores.data.local.entities.TurnoEntity
+import com.rinconsur.probadores.data.local.entities.UsuarioEntity
 import com.rinconsur.probadores.data.repository.*
 import com.rinconsur.probadores.utils.SessionManager
 import kotlinx.coroutines.launch
@@ -102,6 +103,37 @@ class LoginViewModel @JvmOverloads constructor(
                 )
             }
             onResultado(resultado)
+        }
+    }
+
+    fun recuperarContrasena(
+        correo: String,
+        nuevaContrasena: String,
+        onResultado: (Boolean, String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val cleanCorreo = correo.trim()
+            val cleanPass = nuevaContrasena.trim()
+
+            val usuarios: List<UsuarioEntity> = usuarioRepository.obtenerTodosUsuarios()
+            val usuario = usuarios.find { it.correo.equals(cleanCorreo, ignoreCase = true) }
+
+            if (usuario == null) {
+                onResultado(false, "No se encontró ninguna cuenta registrada con el correo: $cleanCorreo")
+            } else {
+                val error = usuarioRepository.editarCuenta(
+                    username = usuario.username,
+                    nuevoNombre = usuario.nombre,
+                    nuevoCorreo = usuario.correo,
+                    nuevoRol = usuario.rol,
+                    nuevaPassword = cleanPass
+                )
+                if (error == null) {
+                    onResultado(true, "Contraseña actualizada exitosamente para la cuenta de ${usuario.nombre} (${usuario.username})")
+                } else {
+                    onResultado(false, error)
+                }
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.rinconsur.probadores.ui.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -60,6 +61,8 @@ fun LoginScreen(
 
     var loginGeneralError by remember { mutableStateOf<String?>(null) }
     var cargandoLogin by remember { mutableStateOf(false) }
+
+    var mostrarDialogRecuperar by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -274,7 +277,19 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = { mostrarDialogRecuperar = true },
+                        enabled = !cargandoLogin
+                    ) {
+                        Text("¿Olvidaste tu contraseña?", fontSize = 13.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Button(
                     enabled = !cargandoLogin,
@@ -310,5 +325,103 @@ fun LoginScreen(
                 }
             }
         }
+    }
+
+    // Diálogo de Recuperación de Contraseña
+    if (mostrarDialogRecuperar) {
+        var correoRecuperacion by remember { mutableStateOf("") }
+        var correoRecuperacionError by remember { mutableStateOf<String?>(null) }
+        var nuevaPasswordRecuperacion by remember { mutableStateOf("") }
+        var nuevaPasswordError by remember { mutableStateOf<String?>(null) }
+        var cargandoRecuperacion by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { if (!cargandoRecuperacion) mostrarDialogRecuperar = false },
+            title = {
+                Text(
+                    text = "Recuperar Contraseña",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Ingresa tu correo electrónico registrado y tu nueva contraseña para actualizar la clave de tu cuenta.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = correoRecuperacion,
+                        onValueChange = {
+                            correoRecuperacion = it
+                            correoRecuperacionError = null
+                        },
+                        label = { Text("Correo Electrónico") },
+                        isError = correoRecuperacionError != null,
+                        supportingText = correoRecuperacionError?.let { err -> { Text(err) } },
+                        singleLine = true,
+                        enabled = !cargandoRecuperacion,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = nuevaPasswordRecuperacion,
+                        onValueChange = {
+                            nuevaPasswordRecuperacion = it
+                            nuevaPasswordError = null
+                        },
+                        label = { Text("Nueva Contraseña") },
+                        isError = nuevaPasswordError != null,
+                        supportingText = nuevaPasswordError?.let { err -> { Text(err) } },
+                        singleLine = true,
+                        enabled = !cargandoRecuperacion,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = !cargandoRecuperacion,
+                    onClick = {
+                        val errMail = viewModel.validarCorreo(correoRecuperacion)
+                        val errPass = com.rinconsur.probadores.utils.PasswordValidator.validarContrasena(nuevaPasswordRecuperacion)
+
+                        correoRecuperacionError = errMail
+                        nuevaPasswordError = errPass
+
+                        if (errMail == null && errPass == null) {
+                            cargandoRecuperacion = true
+                            viewModel.recuperarContrasena(
+                                correo = correoRecuperacion,
+                                nuevaContrasena = nuevaPasswordRecuperacion
+                            ) { exito, mensaje ->
+                                cargandoRecuperacion = false
+                                Toast.makeText(context, mensaje, Toast.LENGTH_LONG).show()
+                                if (exito) {
+                                    mostrarDialogRecuperar = false
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text(if (cargandoRecuperacion) "Actualizando..." else "Restablecer")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    enabled = !cargandoRecuperacion,
+                    onClick = { mostrarDialogRecuperar = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
