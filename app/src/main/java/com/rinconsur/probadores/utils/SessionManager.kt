@@ -10,18 +10,34 @@ object SessionManager {
     private const val KEY_USER_ID = "logged_user_id"
     private const val KEY_USERNAME = "logged_username"
     private const val KEY_USER_ROL = "logged_user_rol"
+    private const val KEY_DEBE_CAMBIAR_CLAVE = "must_change_password"
 
     private fun getPreferences(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 
     // --- SESIÓN EMPLEADOS ---
-    fun guardarSesionEmpleado(context: Context, id: Long, username: String, rol: String) {
+    fun guardarSesionEmpleado(
+        context: Context,
+        id: Long,
+        username: String,
+        rol: String,
+        debeCambiarContrasena: Boolean = false
+    ) {
         getPreferences(context).edit()
             .putLong(KEY_USER_ID, id)
             .putString(KEY_USERNAME, username.trim())
             .putString(KEY_USER_ROL, rol)
+            .putBoolean(KEY_DEBE_CAMBIAR_CLAVE, debeCambiarContrasena)
             .apply()
+    }
+
+    fun debeCambiarContrasena(context: Context): Boolean {
+        return getPreferences(context).getBoolean(KEY_DEBE_CAMBIAR_CLAVE, false)
+    }
+
+    fun marcarContrasenaCambiada(context: Context) {
+        getPreferences(context).edit().putBoolean(KEY_DEBE_CAMBIAR_CLAVE, false).apply()
     }
 
     fun obtenerEmpleadoId(context: Context): Long {
@@ -41,6 +57,7 @@ object SessionManager {
             .remove(KEY_USER_ID)
             .remove(KEY_USERNAME)
             .remove(KEY_USER_ROL)
+            .remove(KEY_DEBE_CAMBIAR_CLAVE)
             .apply()
     }
 

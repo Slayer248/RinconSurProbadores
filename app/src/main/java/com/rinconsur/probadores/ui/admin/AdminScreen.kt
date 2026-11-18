@@ -1166,6 +1166,11 @@ private fun ItemProbadorAdmin(
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text(
+                    text = probador.ultimoUsoTexto,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if (bloqueado && !probador.motivoFueraServicio.isNullOrBlank()) {
                     Text(
                         text = "Motivo: ${probador.motivoFueraServicio}",

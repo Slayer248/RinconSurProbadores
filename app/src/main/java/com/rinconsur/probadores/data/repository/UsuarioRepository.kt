@@ -167,7 +167,7 @@ class UsuarioRepositoryImpl(
         return when (val res = llamarApi { usuarioApi.recuperarContrasena(req) }) {
             is ResultadoApi.Exito -> Pair(
                 true,
-                "Se ha enviado una nueva contraseña temporal a tu correo electrónico."
+                "Se ha enviado una contraseña temporal a tu correo. Deberás cambiarla al iniciar sesión."
             )
             is ResultadoApi.Error -> Pair(false, res.mensaje)
         }

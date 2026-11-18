@@ -52,7 +52,8 @@ data class UsuarioResponse(
     val correo: String,
     val rolId: Long,
     val rolNombre: String,
-    val bloqueado: Boolean
+    val bloqueado: Boolean,
+    val debeCambiarContrasena: Boolean = false
 ) {
     fun aUsuarioEntity(): UsuarioEntity = UsuarioEntity(
         username = username,
@@ -84,14 +85,20 @@ data class ProbadorResponse(
     val esAccesible: Boolean,
     val estado: String,
     val desdeHora: String,
-    val motivoFueraServicio: String?
+    val motivoFueraServicio: String?,
+    val ultimoCliente: String? = null,
+    val ultimoTurno: String? = null,
+    val ultimoUso: String? = null
 ) {
     fun aProbadorEntity(): ProbadorEntity = ProbadorEntity(
         codigo = codigo,
         esAccesible = esAccesible,
         estado = estado,
         desdeHora = desdeHora,
-        motivoFueraServicio = motivoFueraServicio
+        motivoFueraServicio = motivoFueraServicio,
+        ultimoCliente = ultimoCliente,
+        ultimoTurno = ultimoTurno,
+        ultimoUso = ultimoUso
     )
 }
 
