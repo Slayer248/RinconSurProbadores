@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.rinconsur.probadores.ui.admin.AdminScreen
 import com.rinconsur.probadores.ui.asistente.AsistenteScreen
+import com.rinconsur.probadores.ui.auth.AvisoCambioContrasena
 import com.rinconsur.probadores.ui.auth.LoginScreen
 import com.rinconsur.probadores.ui.cliente.ClienteScreen
 import com.rinconsur.probadores.ui.theme.RetailDarkNavy
@@ -130,6 +131,14 @@ class MainActivity : ComponentActivity() {
                             AsistenteScreen(
                                 username = username
                             )
+                            AvisoCambioContrasena(
+                                username = username,
+                                onCerrarSesion = {
+                                    navController.navigate("login") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                }
+                            )
                         }
 
                         composable(
@@ -139,6 +148,14 @@ class MainActivity : ComponentActivity() {
                             val username = backStackEntry.arguments?.getString("username") ?: "Admin"
                             AdminScreen(
                                 username = username
+                            )
+                            AvisoCambioContrasena(
+                                username = username,
+                                onCerrarSesion = {
+                                    navController.navigate("login") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                }
                             )
                         }
                     }

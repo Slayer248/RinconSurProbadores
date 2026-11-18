@@ -99,7 +99,8 @@ class LoginViewModel @JvmOverloads constructor(
                     context = getApplication(),
                     id = resultado.usuario.id,
                     username = resultado.usuario.username,
-                    rol = resultado.usuario.rolNombre
+                    rol = resultado.usuario.rolNombre,
+                    debeCambiarContrasena = resultado.usuario.debeCambiarContrasena
                 )
             }
             onResultado(resultado)

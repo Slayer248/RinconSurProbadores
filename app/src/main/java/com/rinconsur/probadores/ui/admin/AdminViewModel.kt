@@ -9,6 +9,8 @@ import com.rinconsur.probadores.data.local.entities.ProbadorEntity
 import com.rinconsur.probadores.data.local.entities.UsuarioEntity
 import com.rinconsur.probadores.data.repository.*
 import com.rinconsur.probadores.utils.SessionManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class AdminViewModel @JvmOverloads constructor(
@@ -24,7 +26,12 @@ class AdminViewModel @JvmOverloads constructor(
     val probadoresLiveData: LiveData<List<ProbadorEntity>> = _probadores
 
     init {
-        refrescarTodo()
+        viewModelScope.launch {
+            while (isActive) {
+                refrescarTodo()
+                delay(10_000L) // Mantiene al día el estado y el último uso de los probadores
+            }
+        }
     }
 
     fun refrescarTodo() {

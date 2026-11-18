@@ -123,13 +123,19 @@ fun AsistenteScreen(
                 Box(modifier = Modifier.animateItem()) {
                     ItemProbador(
                         probador = probador,
+                        hayClientesEnFila = turnosEnEspera.isNotEmpty(),
                         onCambiarEstado = { p, nuevoEstado ->
-                            viewModel.cambiarEstadoProbador(p, nuevoEstado)
-                            com.rinconsur.probadores.utils.NotificationHelper.enviarNotificacion(
-                                context = context,
-                                titulo = if (nuevoEstado == "LIBRE") "¡Probador Liberado!" else "Estado de Probador",
-                                mensaje = "El probador ${p.codigo} cambió su estado a $nuevoEstado"
-                            )
+                            viewModel.cambiarEstadoProbador(p, nuevoEstado) { error ->
+                                if (error != null) {
+                                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                } else {
+                                    com.rinconsur.probadores.utils.NotificationHelper.enviarNotificacion(
+                                        context = context,
+                                        titulo = if (nuevoEstado == "LIBRE") "¡Probador Liberado!" else "Estado de Probador",
+                                        mensaje = "El probador ${p.codigo} cambió su estado a $nuevoEstado"
+                                    )
+                                }
+                            }
                         }
                     )
                 }
@@ -437,8 +443,11 @@ fun AsistenteScreen(
 @Composable
 private fun ItemProbador(
     probador: ProbadorEntity,
+    hayClientesEnFila: Boolean,
     onCambiarEstado: (ProbadorEntity, String) -> Unit
 ) {
+    val sinClientesParaOcupar = probador.estado == "LIBRE" && !hayClientesEnFila
+
     val siguienteEstado = when (probador.estado) {
         "LIBRE" -> "OCUPADO"
         "OCUPADO" -> "LIMPIEZA"
@@ -530,6 +539,12 @@ private fun ItemProbador(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            Text(
+                text = probador.ultimoUsoTexto,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             if (probador.estado == "FUERA_SERVICIO") {
                 Text(
                     text = "Bloqueado por administración" +
@@ -543,10 +558,16 @@ private fun ItemProbador(
 
             Button(
                 onClick = { onCambiarEstado(probador, siguienteEstado) },
-                enabled = probador.estado != "FUERA_SERVICIO",
+                enabled = probador.estado != "FUERA_SERVICIO" && !sinClientesParaOcupar,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (probador.estado == "FUERA_SERVICIO") "No disponible" else "Cambiar a $siguienteEstado")
+                Text(
+                    when {
+                        probador.estado == "FUERA_SERVICIO" -> "No disponible"
+                        sinClientesParaOcupar -> "Sin clientes en la fila"
+                        else -> "Cambiar a $siguienteEstado"
+                    }
+                )
             }
         }
     }

@@ -46,10 +46,15 @@ class AsistenteViewModel @JvmOverloads constructor(
         }
     }
 
-    fun cambiarEstadoProbador(probador: ProbadorEntity, nuevoEstado: String) {
+    fun cambiarEstadoProbador(
+        probador: ProbadorEntity,
+        nuevoEstado: String,
+        onResultado: (error: String?) -> Unit
+    ) {
         viewModelScope.launch {
-            probadorRepository.cambiarEstadoProbador(probador, nuevoEstado)
+            val error = probadorRepository.cambiarEstadoProbador(probador, nuevoEstado)
             refrescarDatos()
+            onResultado(error)
         }
     }
 
