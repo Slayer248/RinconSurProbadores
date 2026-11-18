@@ -42,11 +42,11 @@ fun AsistenteScreen(
     val turnosEnEspera by viewModel.turnosEnEsperaLiveData.observeAsState(initial = emptyList())
 
     var mostrarDialogPerfil by remember { mutableStateOf(false) }
+    var mostrarDialogCambiarContrasena by remember { mutableStateOf(false) }
     var nombrePerfil by remember { mutableStateOf("") }
     var correoPerfil by remember { mutableStateOf("") }
     var usernamePerfil by remember { mutableStateOf("") }
     var passActual by remember { mutableStateOf("") }
-    var passNueva by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -74,25 +74,34 @@ fun AsistenteScreen(
                 )
             }
 
-            OutlinedButton(
-                onClick = {
-                    viewModel.obtenerUsuario(currentUsernameState) { usuario ->
-                        if (usuario != null) {
-                            nombrePerfil = usuario.nombre
-                            correoPerfil = usuario.correo
-                            usernamePerfil = usuario.username
-                        } else {
-                            nombrePerfil = "Asistente"
-                            correoPerfil = ""
-                            usernamePerfil = currentUsernameState
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.obtenerUsuario(currentUsernameState) { usuario ->
+                            if (usuario != null) {
+                                nombrePerfil = usuario.nombre
+                                correoPerfil = usuario.correo
+                                usernamePerfil = usuario.username
+                            } else {
+                                nombrePerfil = "Asistente"
+                                correoPerfil = ""
+                                usernamePerfil = currentUsernameState
+                            }
+                            passActual = ""
+                            mostrarDialogPerfil = true
                         }
-                        passActual = ""
-                        passNueva = ""
-                        mostrarDialogPerfil = true
                     }
+                ) {
+                    Text("Perfil")
                 }
-            ) {
-                Text("Modificar Perfil")
+
+                OutlinedButton(
+                    onClick = {
+                        mostrarDialogCambiarContrasena = true
+                    }
+                ) {
+                    Text("Contraseña")
+                }
             }
         }
 
@@ -256,18 +265,6 @@ fun AsistenteScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = passNueva,
-                        onValueChange = { passNueva = it },
-                        label = { Text("Nueva Contraseña (Opcional)") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             },
             confirmButton = {
@@ -277,7 +274,6 @@ fun AsistenteScreen(
                         val mailClean = correoPerfil.trim()
                         val userClean = usernamePerfil.trim()
                         val passActClean = passActual.trim()
-                        val passNuevClean = passNueva.trim()
 
                         if (passActClean.isEmpty()) {
                             Toast.makeText(context, "Debes ingresar tu contraseña actual para confirmar", Toast.LENGTH_SHORT).show()
@@ -295,21 +291,13 @@ fun AsistenteScreen(
                             Toast.makeText(context, "El usuario debe tener mínimo 3 letras", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        if (passNuevClean.isNotEmpty()) {
-                            val errPass = com.rinconsur.probadores.utils.PasswordValidator.validarContrasena(passNuevClean)
-                            if (errPass != null) {
-                                Toast.makeText(context, errPass, Toast.LENGTH_LONG).show()
-                                return@Button
-                            }
-                        }
 
                         viewModel.modificarPerfil(
                             currentUsername = currentUsernameState,
                             passwordActual = passActClean,
                             nuevoNombre = nomClean,
                             nuevoCorreo = mailClean,
-                            nuevoUsername = userClean,
-                            nuevaPassword = passNuevClean
+                            nuevoUsername = userClean
                         ) { exito, mensaje, nuevoUser ->
                             Toast.makeText(context, mensaje, Toast.LENGTH_LONG).show()
                             if (exito) {
@@ -327,6 +315,117 @@ fun AsistenteScreen(
             dismissButton = {
                 OutlinedButton(
                     onClick = { mostrarDialogPerfil = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo Cambiar Contraseña Asistente
+    if (mostrarDialogCambiarContrasena) {
+        var passAnterior by remember { mutableStateOf("") }
+        var passNueva by remember { mutableStateOf("") }
+        var passConfirmar by remember { mutableStateOf("") }
+        var guardandoPass by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { if (!guardandoPass) mostrarDialogCambiarContrasena = false },
+            title = { Text("Cambiar Contraseña") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Ingresa tu contraseña actual y define tu nueva contraseña.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = passAnterior,
+                        onValueChange = { passAnterior = it },
+                        label = { Text("Contraseña Anterior") },
+                        singleLine = true,
+                        enabled = !guardandoPass,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = passNueva,
+                        onValueChange = { passNueva = it },
+                        label = { Text("Nueva Contraseña (Min 8, mayús, minús, num, especial)") },
+                        singleLine = true,
+                        enabled = !guardandoPass,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = passConfirmar,
+                        onValueChange = { passConfirmar = it },
+                        label = { Text("Vuelve a introducir la Nueva Contraseña") },
+                        singleLine = true,
+                        enabled = !guardandoPass,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = !guardandoPass,
+                    onClick = {
+                        val passAntClean = passAnterior.trim()
+                        val passNuevClean = passNueva.trim()
+                        val passConfClean = passConfirmar.trim()
+
+                        if (passAntClean.isEmpty()) {
+                            Toast.makeText(context, "Ingresa tu contraseña anterior", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        val errPass = com.rinconsur.probadores.utils.PasswordValidator.validarContrasena(passNuevClean)
+                        if (errPass != null) {
+                            Toast.makeText(context, errPass, Toast.LENGTH_LONG).show()
+                            return@Button
+                        }
+                        if (passConfClean != passNuevClean) {
+                            Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (passAntClean == passNuevClean) {
+                            Toast.makeText(context, "La nueva contraseña debe ser diferente a la anterior", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        guardandoPass = true
+                        viewModel.cambiarContrasena(currentUsernameState, passAntClean, passNuevClean) { exito, mensaje ->
+                            guardandoPass = false
+                            Toast.makeText(context, mensaje, Toast.LENGTH_LONG).show()
+                            if (exito) {
+                                mostrarDialogCambiarContrasena = false
+                            }
+                        }
+                    }
+                ) {
+                    Text(if (guardandoPass) "Guardando..." else "Cambiar Contraseña")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    enabled = !guardandoPass,
+                    onClick = { mostrarDialogCambiarContrasena = false }
                 ) {
                     Text("Cancelar")
                 }

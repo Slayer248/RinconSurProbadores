@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
@@ -57,11 +58,11 @@ fun AdminScreen(
     var accionPendiente by remember { mutableStateOf<AccionPendiente?>(null) }
 
     var mostrarDialogPerfil by remember { mutableStateOf(false) }
+    var mostrarDialogCambiarContrasena by remember { mutableStateOf(false) }
     var nombrePerfil by remember { mutableStateOf("") }
     var correoPerfil by remember { mutableStateOf("") }
     var usernamePerfil by remember { mutableStateOf("") }
     var passActual by remember { mutableStateOf("") }
-    var passNueva by remember { mutableStateOf("") }
 
     val todosUsuarios by viewModel.usuariosLiveData.observeAsState(initial = emptyList())
     val probadores by viewModel.probadoresLiveData.observeAsState(initial = emptyList())
@@ -100,25 +101,34 @@ fun AdminScreen(
                 )
             }
 
-            OutlinedButton(
-                onClick = {
-                    viewModel.obtenerUsuario(currentUsernameState) { usuario ->
-                        if (usuario != null) {
-                            nombrePerfil = usuario.nombre
-                            correoPerfil = usuario.correo
-                            usernamePerfil = usuario.username
-                        } else {
-                            nombrePerfil = "Administrador"
-                            correoPerfil = "admin@rinconsur.com"
-                            usernamePerfil = currentUsernameState
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.obtenerUsuario(currentUsernameState) { usuario ->
+                            if (usuario != null) {
+                                nombrePerfil = usuario.nombre
+                                correoPerfil = usuario.correo
+                                usernamePerfil = usuario.username
+                            } else {
+                                nombrePerfil = "Administrador"
+                                correoPerfil = "admin@rinconsur.com"
+                                usernamePerfil = currentUsernameState
+                            }
+                            passActual = ""
+                            mostrarDialogPerfil = true
                         }
-                        passActual = ""
-                        passNueva = ""
-                        mostrarDialogPerfil = true
                     }
+                ) {
+                    Text("Perfil")
                 }
-            ) {
-                Text("Modificar Perfil")
+
+                OutlinedButton(
+                    onClick = {
+                        mostrarDialogCambiarContrasena = true
+                    }
+                ) {
+                    Text("Contraseña")
+                }
             }
         }
 
@@ -293,7 +303,6 @@ fun AdminScreen(
         var correoPerfilError by remember { mutableStateOf<String?>(null) }
         var usernamePerfilError by remember { mutableStateOf<String?>(null) }
         var passActualError by remember { mutableStateOf<String?>(null) }
-        var passNuevaError by remember { mutableStateOf<String?>(null) }
         var perfilGeneralError by remember { mutableStateOf<String?>(null) }
 
         AlertDialog(
@@ -408,27 +417,6 @@ fun AdminScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = passNueva,
-                        onValueChange = {
-                            passNueva = it
-                            passNuevaError = null
-                            perfilGeneralError = null
-                        },
-                        label = { Text("Nueva Contraseña (Opcional)") },
-                        isError = passNuevaError != null,
-                        supportingText = passNuevaError?.let { err -> { Text(err) } },
-                        trailingIcon = if (passNuevaError != null) {
-                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
-                        } else null,
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             },
             confirmButton = {
@@ -438,22 +426,19 @@ fun AdminScreen(
                         val errMail = viewModel.validarCorreo(correoPerfil)
                         val errUser = viewModel.validarUsername(usernamePerfil)
                         val errPassAct = if (passActual.trim().isEmpty()) "Debes ingresar tu contraseña actual" else null
-                        val errPassNuev = if (passNueva.trim().isNotEmpty()) PasswordValidator.validarContrasena(passNueva.trim()) else null
 
                         nombrePerfilError = errNom
                         correoPerfilError = errMail
                         usernamePerfilError = errUser
                         passActualError = errPassAct
-                        passNuevaError = errPassNuev
 
-                        if (errNom == null && errMail == null && errUser == null && errPassAct == null && errPassNuev == null) {
+                        if (errNom == null && errMail == null && errUser == null && errPassAct == null) {
                             viewModel.modificarPerfil(
                                 currentUsername = currentUsernameState,
                                 passwordActual = passActual.trim(),
                                 nuevoNombre = nombrePerfil.trim(),
                                 nuevoCorreo = correoPerfil.trim(),
-                                nuevoUsername = usernamePerfil.trim(),
-                                nuevaPassword = passNueva.trim()
+                                nuevoUsername = usernamePerfil.trim()
                             ) { exito, mensaje, nuevoUser ->
                                 if (exito) {
                                     if (nuevoUser != null) {
@@ -473,6 +458,163 @@ fun AdminScreen(
             dismissButton = {
                 OutlinedButton(
                     onClick = { mostrarDialogPerfil = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo Cambiar Contraseña de Admin
+    if (mostrarDialogCambiarContrasena) {
+        var passAnterior by remember { mutableStateOf("") }
+        var passAnteriorError by remember { mutableStateOf<String?>(null) }
+        var passNueva by remember { mutableStateOf("") }
+        var passNuevaError by remember { mutableStateOf<String?>(null) }
+        var passConfirmar by remember { mutableStateOf("") }
+        var passConfirmarError by remember { mutableStateOf<String?>(null) }
+        var errorGeneralPass by remember { mutableStateOf<String?>(null) }
+        var guardandoPass by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { if (!guardandoPass) mostrarDialogCambiarContrasena = false },
+            title = { Text("Cambiar Contraseña") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Ingresa tu contraseña actual y define tu nueva contraseña.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    errorGeneralPass?.let { err ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                        ) {
+                            Text(
+                                text = err,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = passAnterior,
+                        onValueChange = {
+                            passAnterior = it
+                            passAnteriorError = null
+                            errorGeneralPass = null
+                        },
+                        label = { Text("Contraseña Anterior") },
+                        isError = passAnteriorError != null,
+                        supportingText = passAnteriorError?.let { err -> { Text(err) } },
+                        trailingIcon = if (passAnteriorError != null) {
+                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                        } else null,
+                        singleLine = true,
+                        enabled = !guardandoPass,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = passNueva,
+                        onValueChange = {
+                            passNueva = it
+                            passNuevaError = null
+                            errorGeneralPass = null
+                        },
+                        label = { Text("Nueva Contraseña (Min 8, mayús, minús, num, especial)") },
+                        isError = passNuevaError != null,
+                        supportingText = passNuevaError?.let { err -> { Text(err) } },
+                        trailingIcon = if (passNuevaError != null) {
+                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                        } else null,
+                        singleLine = true,
+                        enabled = !guardandoPass,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = passConfirmar,
+                        onValueChange = {
+                            passConfirmar = it
+                            passConfirmarError = null
+                            errorGeneralPass = null
+                        },
+                        label = { Text("Vuelve a introducir la Nueva Contraseña") },
+                        isError = passConfirmarError != null,
+                        supportingText = passConfirmarError?.let { err -> { Text(err) } },
+                        trailingIcon = if (passConfirmarError != null) {
+                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                        } else null,
+                        singleLine = true,
+                        enabled = !guardandoPass,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = !guardandoPass,
+                    onClick = {
+                        val passAntClean = passAnterior.trim()
+                        val passNuevClean = passNueva.trim()
+                        val passConfClean = passConfirmar.trim()
+
+                        val errAnt = if (passAntClean.isEmpty()) "Ingresa tu contraseña actual" else null
+                        val errNuev = PasswordValidator.validarContrasena(passNuevClean)
+                        val errConf = when {
+                            passConfClean.isEmpty() -> "Vuelve a introducir la nueva contraseña"
+                            passConfClean != passNuevClean -> "Las contraseñas no coinciden"
+                            passAntClean == passNuevClean -> "La nueva contraseña debe ser diferente a la anterior"
+                            else -> null
+                        }
+
+                        passAnteriorError = errAnt
+                        passNuevaError = errNuev
+                        passConfirmarError = errConf
+
+                        if (errAnt == null && errNuev == null && errConf == null) {
+                            guardandoPass = true
+                            viewModel.cambiarContrasena(currentUsernameState, passAntClean, passNuevClean) { exito, mensaje ->
+                                guardandoPass = false
+                                if (exito) {
+                                    Toast.makeText(context, mensaje, Toast.LENGTH_SHORT).show()
+                                    mostrarDialogCambiarContrasena = false
+                                } else {
+                                    errorGeneralPass = mensaje
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text(if (guardandoPass) "Guardando..." else "Cambiar Contraseña")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    enabled = !guardandoPass,
+                    onClick = { mostrarDialogCambiarContrasena = false }
                 ) {
                     Text("Cancelar")
                 }
@@ -599,47 +741,74 @@ private fun CuentaDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = {
-                        password = it
-                        passwordError = null
-                        errorGeneral = null
-                    },
-                    label = {
-                        Text(if (esEdicion) "Nueva Contraseña (Opcional)" else "Contraseña (Min 8, mayús, minús, num, especial)")
-                    },
-                    isError = passwordError != null,
-                    supportingText = passwordError?.let { err -> { Text(err) } },
-                    trailingIcon = if (passwordError != null) {
-                        { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
-                    } else null,
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                if (esEdicion) {
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = {
+                            password = it
+                            passwordError = null
+                            errorGeneral = null
+                        },
+                        label = { Text("Nueva Contraseña (Opcional)") },
+                        isError = passwordError != null,
+                        supportingText = passwordError?.let { err -> { Text(err) } },
+                        trailingIcon = if (passwordError != null) {
+                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                        } else null,
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = {
-                        confirmPassword = it
-                        confirmPasswordError = null
-                        errorGeneral = null
-                    },
-                    label = { Text("Confirmar Contraseña") },
-                    isError = confirmPasswordError != null,
-                    supportingText = confirmPasswordError?.let { err -> { Text(err) } },
-                    trailingIcon = if (confirmPasswordError != null) {
-                        { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
-                    } else null,
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = {
+                            confirmPassword = it
+                            confirmPasswordError = null
+                            errorGeneral = null
+                        },
+                        label = { Text("Confirmar Contraseña") },
+                        isError = confirmPasswordError != null,
+                        supportingText = confirmPasswordError?.let { err -> { Text(err) } },
+                        trailingIcon = if (confirmPasswordError != null) {
+                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
+                        } else null,
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                } else {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Info,
+                                contentDescription = "Información",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = "La contraseña se generará automáticamente y se enviará al correo electrónico especificado.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
@@ -664,14 +833,13 @@ private fun CuentaDialog(
                     val userClean = usernameField.trim()
                     val passClean = password.trim()
                     val confirmClean = confirmPassword.trim()
-                    val validarPass = !esEdicion || passClean.isNotEmpty() || confirmClean.isNotEmpty()
+                    val validarPass = esEdicion && (passClean.isNotEmpty() || confirmClean.isNotEmpty())
 
                     val errNom = viewModel.validarNombreCompleto(nomClean)
                     val errCorreo = viewModel.validarCorreo(correoClean)
                     val errUser = viewModel.validarUsername(userClean)
                     val errPass = if (validarPass) {
-                        if (passClean.isEmpty()) "La contraseña no puede estar vacía"
-                        else PasswordValidator.validarContrasena(passClean)
+                        PasswordValidator.validarContrasena(passClean)
                     } else null
                     val errConfirm = if (validarPass && passClean != confirmClean) "Las contraseñas no coinciden" else null
 
@@ -694,7 +862,7 @@ private fun CuentaDialog(
                         if (esEdicion) {
                             viewModel.editarCuenta(userClean, nomClean, correoClean, rolSeleccionado, passClean, alTerminar)
                         } else {
-                            viewModel.crearUsuario(nomClean, correoClean, userClean, passClean, rolSeleccionado, alTerminar)
+                            viewModel.crearUsuario(nomClean, correoClean, userClean, rolSeleccionado, alTerminar)
                         }
                     }
                 }

@@ -107,33 +107,17 @@ class LoginViewModel @JvmOverloads constructor(
     }
 
     fun recuperarContrasena(
-        correo: String,
-        nuevaContrasena: String,
+        username: String,
         onResultado: (Boolean, String) -> Unit
     ) {
         viewModelScope.launch {
-            val cleanCorreo = correo.trim()
-            val cleanPass = nuevaContrasena.trim()
-
-            val usuarios: List<UsuarioEntity> = usuarioRepository.obtenerTodosUsuarios()
-            val usuario = usuarios.find { it.correo.equals(cleanCorreo, ignoreCase = true) }
-
-            if (usuario == null) {
-                onResultado(false, "No se encontró ninguna cuenta registrada con el correo: $cleanCorreo")
-            } else {
-                val error = usuarioRepository.editarCuenta(
-                    username = usuario.username,
-                    nuevoNombre = usuario.nombre,
-                    nuevoCorreo = usuario.correo,
-                    nuevoRol = usuario.rol,
-                    nuevaPassword = cleanPass
-                )
-                if (error == null) {
-                    onResultado(true, "Contraseña actualizada exitosamente para la cuenta de ${usuario.nombre} (${usuario.username})")
-                } else {
-                    onResultado(false, error)
-                }
+            val cleanUser = username.trim()
+            if (cleanUser.isEmpty()) {
+                onResultado(false, "Por favor ingresa tu nombre de usuario")
+                return@launch
             }
+            val (exito, mensaje) = usuarioRepository.recuperarContrasena(cleanUser)
+            onResultado(exito, mensaje)
         }
     }
 }

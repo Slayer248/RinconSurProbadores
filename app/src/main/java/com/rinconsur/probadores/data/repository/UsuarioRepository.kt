@@ -12,7 +12,7 @@ interface UsuarioRepository {
         nombre: String,
         correo: String,
         username: String,
-        pass: String,
+        pass: String = "",
         rol: String
     ): String?
     suspend fun modificarPerfil(
@@ -20,9 +20,16 @@ interface UsuarioRepository {
         passwordActual: String,
         nuevoNombre: String,
         nuevoCorreo: String,
-        nuevoUsername: String,
-        nuevaPassword: String
+        nuevoUsername: String
     ): Triple<Boolean, String, String?>
+    suspend fun cambiarContrasena(
+        username: String,
+        passActual: String,
+        passNueva: String
+    ): Pair<Boolean, String>
+    suspend fun recuperarContrasena(
+        username: String
+    ): Pair<Boolean, String>
     suspend fun editarCuenta(
         username: String,
         nuevoNombre: String,
@@ -92,7 +99,7 @@ class UsuarioRepositoryImpl(
             username = username.trim(),
             nombre = nombre.trim(),
             correo = correo.trim(),
-            contrasena = pass.trim(),
+            contrasena = pass.trim().ifEmpty { null },
             rolId = rolId
         )
         return when (val res = llamarApi { usuarioApi.crearUsuario(req) }) {
@@ -106,9 +113,14 @@ class UsuarioRepositoryImpl(
         passwordActual: String,
         nuevoNombre: String,
         nuevoCorreo: String,
-        nuevoUsername: String,
-        nuevaPassword: String
+        nuevoUsername: String
     ): Triple<Boolean, String, String?> {
+        // Validar contraseña actual autenticando con la API
+        val authRes = autenticar(currentUsername.trim(), passwordActual.trim())
+        if (authRes is ResultadoLogin.Error) {
+            return Triple(false, "La contraseña actual es incorrecta", null)
+        }
+
         val actual = when (val res = llamarApi { usuarioApi.obtenerPorUsername(currentUsername.trim()) }) {
             is ResultadoApi.Exito -> res.datos
             is ResultadoApi.Error -> return Triple(false, res.mensaje, null)
@@ -127,18 +139,38 @@ class UsuarioRepositoryImpl(
             return Triple(false, updateRes.mensaje, null)
         }
 
-        if (nuevaPassword.trim().isNotEmpty()) {
-            val passReq = CambiarContrasenaRequest(
-                actual = passwordActual.trim(),
-                nueva = nuevaPassword.trim()
-            )
-            val passRes = llamarApi { usuarioApi.cambiarContrasena(actual.id, passReq) }
-            if (passRes is ResultadoApi.Error) {
-                return Triple(false, passRes.mensaje, null)
-            }
+        return Triple(true, "Perfil actualizado con éxito", nuevoUsername.trim())
+    }
+
+    override suspend fun cambiarContrasena(
+        username: String,
+        passActual: String,
+        passNueva: String
+    ): Pair<Boolean, String> {
+        val actual = when (val res = llamarApi { usuarioApi.obtenerPorUsername(username.trim()) }) {
+            is ResultadoApi.Exito -> res.datos
+            is ResultadoApi.Error -> return Pair(false, res.mensaje)
         }
 
-        return Triple(true, "Perfil actualizado con éxito", nuevoUsername.trim())
+        val passReq = CambiarContrasenaRequest(
+            actual = passActual.trim(),
+            nueva = passNueva.trim()
+        )
+        return when (val passRes = llamarApi { usuarioApi.cambiarContrasena(actual.id, passReq) }) {
+            is ResultadoApi.Exito -> Pair(true, "Contraseña modificada exitosamente")
+            is ResultadoApi.Error -> Pair(false, passRes.mensaje)
+        }
+    }
+
+    override suspend fun recuperarContrasena(username: String): Pair<Boolean, String> {
+        val req = RecuperarContrasenaRequest(username = username.trim())
+        return when (val res = llamarApi { usuarioApi.recuperarContrasena(req) }) {
+            is ResultadoApi.Exito -> Pair(
+                true,
+                "Se ha enviado una nueva contraseña temporal a tu correo electrónico."
+            )
+            is ResultadoApi.Error -> Pair(false, res.mensaje)
+        }
     }
 
     override suspend fun editarCuenta(

@@ -20,7 +20,7 @@ data class RegistroUsuarioRequest(
     val username: String,
     val nombre: String,
     val correo: String,
-    val contrasena: String,
+    val contrasena: String? = null,
     val rolId: Long
 )
 
@@ -35,6 +35,10 @@ data class ActualizarUsuarioRequest(
 data class CambiarContrasenaRequest(
     val actual: String,
     val nueva: String
+)
+
+data class RecuperarContrasenaRequest(
+    val username: String
 )
 
 data class BloqueoRequest(

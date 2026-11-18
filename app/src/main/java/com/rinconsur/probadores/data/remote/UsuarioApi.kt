@@ -36,6 +36,11 @@ interface UsuarioApi {
         @Body request: CambiarContrasenaRequest
     ): Response<Unit>
 
+    @POST("api/usuarios/recuperar")
+    suspend fun recuperarContrasena(
+        @Body request: RecuperarContrasenaRequest
+    ): Response<Unit>
+
     @PATCH("api/usuarios/{id}/bloqueo")
     suspend fun cambiarBloqueo(
         @Path("id") id: Long,

@@ -73,7 +73,6 @@ class AdminViewModel @JvmOverloads constructor(
         nuevoNombre: String,
         nuevoCorreo: String,
         nuevoUsername: String,
-        nuevaPassword: String,
         onResultado: (exito: Boolean, mensaje: String, nuevoUsername: String?) -> Unit
     ) {
         viewModelScope.launch {
@@ -82,11 +81,26 @@ class AdminViewModel @JvmOverloads constructor(
                 passwordActual = passwordActual,
                 nuevoNombre = nuevoNombre,
                 nuevoCorreo = nuevoCorreo,
-                nuevoUsername = nuevoUsername,
-                nuevaPassword = nuevaPassword
+                nuevoUsername = nuevoUsername
             )
             if (exito) refrescarTodo()
             onResultado(exito, mensaje, updatedUser)
+        }
+    }
+
+    fun cambiarContrasena(
+        username: String,
+        passActual: String,
+        passNueva: String,
+        onResultado: (exito: Boolean, mensaje: String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val (exito, mensaje) = usuarioRepository.cambiarContrasena(
+                username = username,
+                passActual = passActual,
+                passNueva = passNueva
+            )
+            onResultado(exito, mensaje)
         }
     }
 
@@ -94,12 +108,11 @@ class AdminViewModel @JvmOverloads constructor(
         nombre: String,
         correo: String,
         username: String,
-        pass: String,
         rol: String,
         onResultado: (String?) -> Unit
     ) {
         viewModelScope.launch {
-            val error = usuarioRepository.crearUsuario(nombre, correo, username, pass, rol)
+            val error = usuarioRepository.crearUsuario(nombre, correo, username, "", rol)
             if (error == null) refrescarTodo()
             onResultado(error)
         }
