@@ -17,23 +17,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.rinconsur.probadores.data.local.AppDatabase
 import com.rinconsur.probadores.ui.admin.AdminScreen
 import com.rinconsur.probadores.ui.asistente.AsistenteScreen
 import com.rinconsur.probadores.ui.auth.LoginScreen
 import com.rinconsur.probadores.ui.cliente.ClienteScreen
 import com.rinconsur.probadores.ui.theme.RetailDarkNavy
 import com.rinconsur.probadores.ui.theme.RinconSurTheme
-import com.rinconsur.probadores.utils.DataInitializer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
