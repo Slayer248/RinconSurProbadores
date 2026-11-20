@@ -232,14 +232,14 @@ fun AdminScreen(
     // Confirmaciones de eliminar / bloquear
     when (val accion = accionPendiente) {
         is AccionPendiente.EliminarCuenta -> ConfirmarDialog(
-            titulo = "Eliminar cuenta",
-            mensaje = "¿Eliminar la cuenta de ${accion.usuario.nombre} (${accion.usuario.username})? Esta acción no se puede deshacer.",
-            textoConfirmar = "Eliminar",
+            titulo = "Inhabilitar cuenta",
+            mensaje = "¿Inhabilitar la cuenta de ${accion.usuario.nombre} (${accion.usuario.username})? La cuenta se desactivará y no podrá iniciar sesión, pero sus datos históricos se conservarán. Podrás volver a habilitarla desbloqueándola.",
+            textoConfirmar = "Inhabilitar",
             destructivo = true,
             onDismiss = { accionPendiente = null },
             onConfirmar = {
                 viewModel.eliminarCuenta(accion.usuario.username, currentUsernameState) { error ->
-                    mostrarResultado(error, "Cuenta ${accion.usuario.username} eliminada")
+                    mostrarResultado(error, "Cuenta ${accion.usuario.username} inhabilitada")
                 }
                 accionPendiente = null
             }
@@ -267,14 +267,14 @@ fun AdminScreen(
         }
 
         is AccionPendiente.EliminarProbador -> ConfirmarDialog(
-            titulo = "Eliminar probador",
-            mensaje = "¿Eliminar el probador ${accion.probador.codigo}? Esta acción no se puede deshacer.",
-            textoConfirmar = "Eliminar",
+            titulo = "Desactivar probador",
+            mensaje = "¿Desactivar el probador ${accion.probador.codigo}? Dejará de mostrarse, pero su historial de uso se conservará.",
+            textoConfirmar = "Desactivar",
             destructivo = true,
             onDismiss = { accionPendiente = null },
             onConfirmar = {
                 viewModel.eliminarProbador(accion.probador) { error ->
-                    mostrarResultado(error, "Probador ${accion.probador.codigo} eliminado")
+                    mostrarResultado(error, "Probador ${accion.probador.codigo} desactivado")
                 }
                 accionPendiente = null
             }
@@ -625,7 +625,7 @@ fun AdminScreen(
 
 /**
  * Formulario para crear (usuarioEditar = null) o editar una cuenta.
- * Al editar, el username no se puede cambiar y la contraseña es opcional.
+ * Al editar, el username no se puede cambiar y la contraseña no se puede modificar.
  */
 @Composable
 private fun CuentaDialog(
@@ -643,12 +643,6 @@ private fun CuentaDialog(
 
     var usernameField by remember { mutableStateOf(usuarioEditar?.username ?: "") }
     var usernameError by remember { mutableStateOf<String?>(null) }
-
-    var password by remember { mutableStateOf("") }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-
-    var confirmPassword by remember { mutableStateOf("") }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
 
     var rolSeleccionado by remember { mutableStateOf(usuarioEditar?.rol ?: "ASISTENTE") }
     var guardando by remember { mutableStateOf(false) }
@@ -741,47 +735,7 @@ private fun CuentaDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                if (esEdicion) {
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            passwordError = null
-                            errorGeneral = null
-                        },
-                        label = { Text("Nueva Contraseña (Opcional)") },
-                        isError = passwordError != null,
-                        supportingText = passwordError?.let { err -> { Text(err) } },
-                        trailingIcon = if (passwordError != null) {
-                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
-                        } else null,
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = {
-                            confirmPassword = it
-                            confirmPasswordError = null
-                            errorGeneral = null
-                        },
-                        label = { Text("Confirmar Contraseña") },
-                        isError = confirmPasswordError != null,
-                        supportingText = confirmPasswordError?.let { err -> { Text(err) } },
-                        trailingIcon = if (confirmPasswordError != null) {
-                            { Icon(Icons.Filled.Error, contentDescription = "Error", tint = MaterialTheme.colorScheme.error) }
-                        } else null,
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                } else {
+                if (!esEdicion) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -831,25 +785,16 @@ private fun CuentaDialog(
                     val nomClean = nombre.trim()
                     val correoClean = correo.trim()
                     val userClean = usernameField.trim()
-                    val passClean = password.trim()
-                    val confirmClean = confirmPassword.trim()
-                    val validarPass = esEdicion && (passClean.isNotEmpty() || confirmClean.isNotEmpty())
 
                     val errNom = viewModel.validarNombreCompleto(nomClean)
                     val errCorreo = viewModel.validarCorreo(correoClean)
                     val errUser = viewModel.validarUsername(userClean)
-                    val errPass = if (validarPass) {
-                        PasswordValidator.validarContrasena(passClean)
-                    } else null
-                    val errConfirm = if (validarPass && passClean != confirmClean) "Las contraseñas no coinciden" else null
 
                     nombreError = errNom
                     correoError = errCorreo
                     usernameError = errUser
-                    passwordError = errPass
-                    confirmPasswordError = errConfirm
 
-                    if (errNom == null && errCorreo == null && errUser == null && errPass == null && errConfirm == null) {
+                    if (errNom == null && errCorreo == null && errUser == null) {
                         guardando = true
                         val alTerminar: (String?) -> Unit = { errorMsg ->
                             guardando = false
@@ -860,7 +805,7 @@ private fun CuentaDialog(
                             }
                         }
                         if (esEdicion) {
-                            viewModel.editarCuenta(userClean, nomClean, correoClean, rolSeleccionado, passClean, alTerminar)
+                            viewModel.editarCuenta(userClean, nomClean, correoClean, rolSeleccionado, alTerminar)
                         } else {
                             viewModel.crearUsuario(nomClean, correoClean, userClean, rolSeleccionado, alTerminar)
                         }
@@ -1131,7 +1076,7 @@ private fun ItemUsuario(
             IconButton(onClick = onEliminar) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = "Eliminar cuenta",
+                    contentDescription = "Inhabilitar cuenta",
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -1193,7 +1138,7 @@ private fun ItemProbadorAdmin(
             IconButton(onClick = onEliminar) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = "Eliminar probador",
+                    contentDescription = "Desactivar probador",
                     tint = MaterialTheme.colorScheme.error
                 )
             }

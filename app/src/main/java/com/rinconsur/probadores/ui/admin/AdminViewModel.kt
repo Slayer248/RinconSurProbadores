@@ -130,12 +130,11 @@ class AdminViewModel @JvmOverloads constructor(
         nuevoNombre: String,
         nuevoCorreo: String,
         nuevoRol: String,
-        nuevaPassword: String,
         onResultado: (String?) -> Unit
     ) {
         viewModelScope.launch {
             val error = usuarioRepository.editarCuenta(
-                username, nuevoNombre, nuevoCorreo, nuevoRol, nuevaPassword
+                username, nuevoNombre, nuevoCorreo, nuevoRol
             )
             if (error == null) refrescarTodo()
             onResultado(error)

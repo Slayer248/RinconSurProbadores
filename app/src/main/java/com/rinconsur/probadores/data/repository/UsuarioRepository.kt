@@ -34,8 +34,7 @@ interface UsuarioRepository {
         username: String,
         nuevoNombre: String,
         nuevoCorreo: String,
-        nuevoRol: String,
-        nuevaPassword: String
+        nuevoRol: String
     ): String?
     suspend fun eliminarCuenta(username: String, adminIdActual: Long?): String?
     suspend fun cambiarBloqueoCuenta(
@@ -177,8 +176,7 @@ class UsuarioRepositoryImpl(
         username: String,
         nuevoNombre: String,
         nuevoCorreo: String,
-        nuevoRol: String,
-        nuevaPassword: String
+        nuevoRol: String
     ): String? {
         val actual = when (val res = llamarApi { usuarioApi.obtenerPorUsername(username.trim()) }) {
             is ResultadoApi.Exito -> res.datos
@@ -191,7 +189,8 @@ class UsuarioRepositoryImpl(
             nombre = nuevoNombre.trim(),
             correo = nuevoCorreo.trim(),
             rolId = rolId,
-            nuevaContrasena = nuevaPassword.trim().ifEmpty { null }
+            // El administrador no puede cambiar la contraseña de otra cuenta
+            nuevaContrasena = null
         )
 
         return when (val res = llamarApi { usuarioApi.actualizarUsuario(actual.id, req) }) {
