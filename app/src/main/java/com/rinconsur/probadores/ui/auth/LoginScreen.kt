@@ -1,6 +1,7 @@
 package com.rinconsur.probadores.ui.auth
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,13 +19,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.rinconsur.probadores.R
 import com.rinconsur.probadores.data.repository.ResultadoLogin
 import com.rinconsur.probadores.utils.SessionManager
 
@@ -38,7 +42,9 @@ fun LoginScreen(
     viewModel: LoginViewModel = viewModel(),
     onNavigateToCliente: (String) -> Unit,
     onNavigateToAsistente: (String) -> Unit,
-    onNavigateToAdmin: (String) -> Unit
+    onNavigateToAdmin: (String) -> Unit,
+    autoReingresoPendiente: Boolean = false,
+    onAutoReingresoConsumido: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -56,6 +62,14 @@ fun LoginScreen(
 
     val posicionTurnoRecordado = remember(turnoRecordado, turnosEnEspera) {
         if (turnoRecordado != null) turnosEnEspera.indexOf(turnoRecordado) + 1 else 0
+    }
+
+    // Al abrir la app con un turno activo recordado, se entra directo a él (para verlo o cancelarlo)
+    LaunchedEffect(turnoRecordado, autoReingresoPendiente) {
+        if (autoReingresoPendiente && turnoRecordado != null && ultimoInvitadoRecordado != null) {
+            onAutoReingresoConsumido()
+            onNavigateToCliente(ultimoInvitadoRecordado)
+        }
     }
 
     var nombreInvitado by remember { mutableStateOf(ultimoInvitadoRecordado ?: "") }
@@ -138,19 +152,32 @@ fun LoginScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Image(
+                painter = painterResource(id = R.drawable.app_logo),
+                contentDescription = "Logo Rincón Sur Probadores",
+                modifier = Modifier.size(80.dp)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Rincón Sur",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Text(
                 text = "Control de Acceso y Probadores",
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 24.dp)
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 40.dp)
             )
 
             if (modoAcceso == ModoAcceso.CLIENTES) {
@@ -241,14 +268,31 @@ fun LoginScreen(
 
                                 if (basicError == null) {
                                     val cleanName = nombreInvitado.trim()
-                                    viewModel.validarInvitadoDisponible(cleanName) { dbError ->
-                                        val esMismoInvitadoRecordado = cleanName.equals(ultimoInvitadoRecordado, ignoreCase = true) && turnoRecordado != null
-                                        if (dbError == null || esMismoInvitadoRecordado) {
-                                            SessionManager.guardarUltimoInvitado(context, cleanName)
-                                            onNavigateToCliente(cleanName)
-                                        } else {
-                                            nombreInvitadoError = dbError
+                                    val ingresarComoInvitado = {
+                                        viewModel.validarInvitadoDisponible(cleanName) { dbError ->
+                                            val esMismoInvitadoRecordado = cleanName.equals(ultimoInvitadoRecordado, ignoreCase = true) && turnoRecordado != null
+                                            if (dbError == null || esMismoInvitadoRecordado) {
+                                                SessionManager.guardarUltimoInvitado(context, cleanName)
+                                                onNavigateToCliente(cleanName)
+                                            } else {
+                                                nombreInvitadoError = dbError
+                                            }
                                         }
+                                    }
+
+                                    val otroInvitado = ultimoInvitadoRecordado != null &&
+                                        !cleanName.equals(ultimoInvitadoRecordado, ignoreCase = true)
+                                    if (otroInvitado) {
+                                        // Con un turno vigente no se puede entrar como otro invitado hasta cancelarlo
+                                        viewModel.buscarTurnoActivo(ultimoInvitadoRecordado!!) { turnoVigente ->
+                                            if (turnoVigente != null) {
+                                                nombreInvitadoError = "Tienes el turno ${turnoVigente.numeroTurno} activo como '$ultimoInvitadoRecordado'. Reingresa a tu turno y cancélalo para entrar con otro nombre."
+                                            } else {
+                                                ingresarComoInvitado()
+                                            }
+                                        }
+                                    } else {
+                                        ingresarComoInvitado()
                                     }
                                 }
                             },

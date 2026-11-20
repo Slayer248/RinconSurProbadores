@@ -11,6 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,6 +43,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             RinconSurTheme {
                 val navController = rememberNavController()
+                // true solo al abrir la app: permite reingresar solo al turno activo recordado
+                var reingresoPendiente by rememberSaveable { mutableStateOf(true) }
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
@@ -47,7 +52,8 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     topBar = {
-                        TopAppBar(
+                        // El login tiene su propia cabecera centrada: se oculta la barra estándar
+                        if (currentRoute != null && currentRoute != "login") TopAppBar(
                             title = {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -97,14 +103,19 @@ class MainActivity : ComponentActivity() {
                         composable("login") {
                             LoginScreen(
                                 onNavigateToCliente = { username ->
+                                    reingresoPendiente = false
                                     navController.navigate("cliente/$username")
                                 },
                                 onNavigateToAsistente = { username ->
+                                    reingresoPendiente = false
                                     navController.navigate("asistente/$username")
                                 },
                                 onNavigateToAdmin = { username ->
+                                    reingresoPendiente = false
                                     navController.navigate("admin/$username")
-                                }
+                                },
+                                autoReingresoPendiente = reingresoPendiente,
+                                onAutoReingresoConsumido = { reingresoPendiente = false }
                             )
                         }
 

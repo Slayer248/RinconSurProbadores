@@ -30,6 +30,15 @@ class LoginViewModel @JvmOverloads constructor(
         }
     }
 
+    /** Consulta la fila en el servidor y entrega el turno en espera de [nombre], o null si no tiene. */
+    fun buscarTurnoActivo(nombre: String, onResultado: (TurnoEntity?) -> Unit) {
+        viewModelScope.launch {
+            val turnos = turnoRepository.obtenerTurnosPorEstadoONull("EN_ESPERA")
+            _turnosEnEspera.value = turnos ?: _turnosEnEspera.value
+            onResultado(turnos?.find { it.nombreCliente.equals(nombre.trim(), ignoreCase = true) })
+        }
+    }
+
     fun validarNombreInvitado(nombre: String): String? {
         val clean = nombre.trim()
         return when {

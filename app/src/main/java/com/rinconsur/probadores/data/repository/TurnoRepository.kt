@@ -5,6 +5,8 @@ import com.rinconsur.probadores.data.remote.*
 
 interface TurnoRepository {
     suspend fun obtenerTurnosPorEstado(estado: String = "EN_ESPERA"): List<TurnoEntity>
+    /** Igual que [obtenerTurnosPorEstado], pero devuelve null si la llamada falló (distingue error de fila vacía). */
+    suspend fun obtenerTurnosPorEstadoONull(estado: String = "EN_ESPERA"): List<TurnoEntity>?
     suspend fun obtenerTurnoActivoCliente(nombreCliente: String): TurnoEntity?
     suspend fun registrarTurno(
         nombreCliente: String,
@@ -22,6 +24,13 @@ class TurnoRepositoryImpl(
         return when (val res = llamarApi { turnoApi.listarTurnos(estado) }) {
             is ResultadoApi.Exito -> res.datos.map { it.aTurnoEntity() }
             is ResultadoApi.Error -> emptyList()
+        }
+    }
+
+    override suspend fun obtenerTurnosPorEstadoONull(estado: String): List<TurnoEntity>? {
+        return when (val res = llamarApi { turnoApi.listarTurnos(estado) }) {
+            is ResultadoApi.Exito -> res.datos.map { it.aTurnoEntity() }
+            is ResultadoApi.Error -> null
         }
     }
 

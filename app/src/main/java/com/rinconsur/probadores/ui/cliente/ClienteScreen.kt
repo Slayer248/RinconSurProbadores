@@ -3,6 +3,7 @@ package com.rinconsur.probadores.ui.cliente
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -20,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -28,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rinconsur.probadores.data.local.entities.TurnoEntity
+import com.rinconsur.probadores.ui.theme.RetailDarkNavy
 import com.rinconsur.probadores.utils.NotificationHelper
 
 @Composable
@@ -78,6 +81,21 @@ fun ClienteScreen(
         if (miTurnoActivo != null) turnosEnEspera.indexOf(miTurnoActivo) + 1 else 0
     }
 
+    // Mientras el cliente tenga un turno activo la pantalla queda anclada: no puede volver al login
+    var mostrarDialogoSalida by remember { mutableStateOf(false) }
+    var mostrarDialogoCancelar by remember { mutableStateOf(false) }
+    var cancelandoTurno by remember { mutableStateOf(false) }
+    val pantallaBloqueada = miTurnoActivo != null
+
+    BackHandler(enabled = pantallaBloqueada) { mostrarDialogoSalida = true }
+
+    LaunchedEffect(pantallaBloqueada) {
+        if (!pantallaBloqueada) {
+            mostrarDialogoSalida = false
+            mostrarDialogoCancelar = false
+        }
+    }
+
     // Efecto: Notificar y vibrar cuando el turno del cliente pasa a posición #1
     LaunchedEffect(posicionMiTurno) {
         if (posicionMiTurno == 1 && miTurnoActivo != null) {
@@ -87,6 +105,60 @@ fun ClienteScreen(
                 mensaje = "Estás en la posición #1 de la fila con el turno ${miTurnoActivo.numeroTurno}. ¡Prepárate para ingresar al probador!"
             )
         }
+    }
+
+    if (mostrarDialogoSalida && miTurnoActivo != null) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoSalida = false },
+            title = { Text("Tienes un turno activo") },
+            text = {
+                Text("No puedes salir mientras tu turno ${miTurnoActivo.numeroTurno} esté en la fila. Si ya no lo necesitas, cancela tu turno para poder salir.")
+            },
+            confirmButton = {
+                Button(onClick = { mostrarDialogoSalida = false }) { Text("Seguir esperando") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = {
+                    mostrarDialogoSalida = false
+                    mostrarDialogoCancelar = true
+                }) { Text("Cancelar mi turno") }
+            }
+        )
+    }
+
+    if (mostrarDialogoCancelar && miTurnoActivo != null) {
+        val turnoId = miTurnoActivo.id
+        AlertDialog(
+            onDismissRequest = { if (!cancelandoTurno) mostrarDialogoCancelar = false },
+            title = { Text("Cancelar mi turno") },
+            text = {
+                Text("¿Cancelar el turno ${miTurnoActivo.numeroTurno}? Perderás tu lugar en la fila y podrás volver al inicio de sesión.")
+            },
+            confirmButton = {
+                Button(
+                    enabled = !cancelandoTurno,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    onClick = {
+                        cancelandoTurno = true
+                        viewModel.cancelarMiTurno(turnoId) { exito, msj ->
+                            cancelandoTurno = false
+                            mostrarDialogoCancelar = false
+                            turnoMensaje = if (exito) {
+                                Pair(true, "Tu turno fue cancelado. Ya puedes volver al inicio de sesión.")
+                            } else {
+                                Pair(false, msj ?: "No se pudo cancelar el turno. Inténtalo nuevamente.")
+                            }
+                        }
+                    }
+                ) { Text(if (cancelandoTurno) "Cancelando..." else "Sí, cancelar turno") }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    enabled = !cancelandoTurno,
+                    onClick = { mostrarDialogoCancelar = false }
+                ) { Text("Volver") }
+            }
+        )
     }
 
     Column(
@@ -109,7 +181,9 @@ fun ClienteScreen(
             )
 
             OutlinedButton(
-                onClick = onNavigateToLogin,
+                onClick = {
+                    if (pantallaBloqueada) mostrarDialogoSalida = true else onNavigateToLogin()
+                },
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
             ) {
                 Icon(
@@ -229,6 +303,20 @@ fun ClienteScreen(
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // Botón sólido azul marino (color de fondo de la app) para contrastar con la tarjeta turquesa
+                            Button(
+                                onClick = { mostrarDialogoCancelar = true },
+                                enabled = !cancelandoTurno,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = RetailDarkNavy,
+                                    contentColor = Color.White,
+                                    disabledContainerColor = RetailDarkNavy.copy(alpha = 0.5f),
+                                    disabledContentColor = Color.White.copy(alpha = 0.6f)
+                                )
+                            ) {
+                                Text("Cancelar Mi Turno")
+                            }
                         }
                     }
                 }

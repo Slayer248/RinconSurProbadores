@@ -40,7 +40,9 @@ class ClienteViewModel @JvmOverloads constructor(
     fun refrescarDatos() {
         viewModelScope.launch {
             _probadores.value = probadorRepository.obtenerTodosProbadores()
-            _turnosEnEspera.value = turnoRepository.obtenerTurnosPorEstado("EN_ESPERA")
+            // Si la llamada falla se conserva la última fila conocida: un error de red no debe
+            // liberar el bloqueo de un cliente con turno activo.
+            turnoRepository.obtenerTurnosPorEstadoONull("EN_ESPERA")?.let { _turnosEnEspera.value = it }
         }
     }
 
@@ -68,6 +70,22 @@ class ClienteViewModel @JvmOverloads constructor(
             )
             if (exito) refrescarDatos()
             onResultado(exito, mensaje)
+        }
+    }
+
+    /**
+     * El propio cliente cancela su turno activo. Al quedar en estado CANCELADO deja de
+     * aparecer en la fila y se libera el bloqueo de navegación de la pantalla.
+     */
+    fun cancelarMiTurno(turnoId: Long, onResultado: (exito: Boolean, msj: String?) -> Unit) {
+        viewModelScope.launch {
+            val error = turnoRepository.actualizarEstadoTurno(turnoId, "CANCELADO")
+            if (error == null) {
+                // Se quita localmente para liberar la pantalla aunque el refresco falle
+                _turnosEnEspera.value = _turnosEnEspera.value.orEmpty().filter { it.id != turnoId }
+                refrescarDatos()
+            }
+            onResultado(error == null, error)
         }
     }
 }
