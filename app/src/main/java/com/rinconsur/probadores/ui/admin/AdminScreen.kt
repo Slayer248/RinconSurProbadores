@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -117,17 +118,27 @@ fun AdminScreen(
                             passActual = ""
                             mostrarDialogPerfil = true
                         }
-                    }
+                    },
+                    modifier = Modifier.size(44.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("Perfil")
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = "Perfil"
+                    )
                 }
 
                 OutlinedButton(
                     onClick = {
                         mostrarDialogCambiarContrasena = true
-                    }
+                    },
+                    modifier = Modifier.size(44.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("Contraseña")
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = "Cambiar contraseña"
+                    )
                 }
             }
         }
@@ -232,14 +243,14 @@ fun AdminScreen(
     // Confirmaciones de eliminar / bloquear
     when (val accion = accionPendiente) {
         is AccionPendiente.EliminarCuenta -> ConfirmarDialog(
-            titulo = "Inhabilitar cuenta",
-            mensaje = "¿Inhabilitar la cuenta de ${accion.usuario.nombre} (${accion.usuario.username})? La cuenta se desactivará y no podrá iniciar sesión, pero sus datos históricos se conservarán. Podrás volver a habilitarla desbloqueándola.",
-            textoConfirmar = "Inhabilitar",
+            titulo = "Eliminar cuenta",
+            mensaje = "¿Eliminar la cuenta de ${accion.usuario.nombre} (${accion.usuario.username})? Dejará de aparecer en la lista y no podrá iniciar sesión. Esta acción no se puede deshacer ni reactivar.",
+            textoConfirmar = "Eliminar",
             destructivo = true,
             onDismiss = { accionPendiente = null },
             onConfirmar = {
                 viewModel.eliminarCuenta(accion.usuario.username, currentUsernameState) { error ->
-                    mostrarResultado(error, "Cuenta ${accion.usuario.username} inhabilitada")
+                    mostrarResultado(error, "Cuenta ${accion.usuario.username} eliminada")
                 }
                 accionPendiente = null
             }
@@ -267,14 +278,14 @@ fun AdminScreen(
         }
 
         is AccionPendiente.EliminarProbador -> ConfirmarDialog(
-            titulo = "Desactivar probador",
-            mensaje = "¿Desactivar el probador ${accion.probador.codigo}? Dejará de mostrarse, pero su historial de uso se conservará.",
-            textoConfirmar = "Desactivar",
+            titulo = "Eliminar probador",
+            mensaje = "¿Eliminar el probador ${accion.probador.codigo}? Dejará de mostrarse y no se puede deshacer.",
+            textoConfirmar = "Eliminar",
             destructivo = true,
             onDismiss = { accionPendiente = null },
             onConfirmar = {
                 viewModel.eliminarProbador(accion.probador) { error ->
-                    mostrarResultado(error, "Probador ${accion.probador.codigo} desactivado")
+                    mostrarResultado(error, "Probador ${accion.probador.codigo} eliminado")
                 }
                 accionPendiente = null
             }
@@ -1076,7 +1087,7 @@ private fun ItemUsuario(
             IconButton(onClick = onEliminar) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = "Inhabilitar cuenta",
+                    contentDescription = "Eliminar cuenta",
                     tint = MaterialTheme.colorScheme.error
                 )
             }

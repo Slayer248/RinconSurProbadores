@@ -90,17 +90,27 @@ fun AsistenteScreen(
                             passActual = ""
                             mostrarDialogPerfil = true
                         }
-                    }
+                    },
+                    modifier = Modifier.size(44.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("Perfil")
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = "Perfil"
+                    )
                 }
 
                 OutlinedButton(
                     onClick = {
                         mostrarDialogCambiarContrasena = true
-                    }
+                    },
+                    modifier = Modifier.size(44.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("Contraseña")
+                    Icon(
+                        imageVector = Icons.Filled.Lock,
+                        contentDescription = "Cambiar contraseña"
+                    )
                 }
             }
         }
