@@ -161,11 +161,15 @@ fun ClienteScreen(
         )
     }
 
-    Column(
+    // Toda la pantalla se desplaza en una sola lista: el encabezado, el formulario y la fila de espera
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+      item {
+        Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -440,19 +444,16 @@ fun ClienteScreen(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = 8.dp)
         )
+        }
+      }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            itemsIndexed(turnosEnEspera, key = { _, turno -> turno.id }) { index, turno ->
-                Box(modifier = Modifier.animateItem()) {
-                    ItemTurno(
-                        turno = turno,
-                        lugar = index + 1,
-                        esMiTurno = turno.id == miTurnoActivo?.id
-                    )
-                }
+        itemsIndexed(turnosEnEspera, key = { _, turno -> turno.id }) { index, turno ->
+            Box(modifier = Modifier.animateItem()) {
+                ItemTurno(
+                    turno = turno,
+                    lugar = index + 1,
+                    esMiTurno = turno.id == miTurnoActivo?.id
+                )
             }
         }
     }
