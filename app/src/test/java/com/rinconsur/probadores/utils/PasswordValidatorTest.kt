@@ -10,7 +10,6 @@ class PasswordValidatorTest {
     @Test
     fun contrasenaFuerte_esAceptada() {
         assertNull(PasswordValidator.validarContrasena("Clave#2026"))
-        // Los espacios al inicio o al final se ignoran
         assertNull(PasswordValidator.validarContrasena("  Clave#2026  "))
     }
 

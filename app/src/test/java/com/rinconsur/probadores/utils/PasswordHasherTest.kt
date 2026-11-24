@@ -2,6 +2,7 @@ package com.rinconsur.probadores.utils
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -16,6 +17,14 @@ class PasswordHasherTest {
         assertEquals(esperado, PasswordHasher.hashPassword("abc"))
         assertEquals(esperado, PasswordHasher.hashPassword("  abc  "))
         assertEquals(64, PasswordHasher.hashPassword("otra clave").length)
+    }
+
+    @Test
+    fun clavesDistintas_generanHuellasDistintas() {
+        val huellaA = PasswordHasher.hashPassword("abc")
+        val huellaB = PasswordHasher.hashPassword("abd")
+
+        assertNotEquals(huellaA, huellaB)
     }
 
     @Test
