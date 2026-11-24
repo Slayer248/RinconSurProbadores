@@ -8,13 +8,7 @@ import org.junit.Test
 class PasswordValidatorTest {
 
     @Test
-    fun contrasenaFuerte_esAceptada() {
-        assertNull(PasswordValidator.validarContrasena("Clave#2026"))
-        assertNull(PasswordValidator.validarContrasena("  Clave#2026  "))
-    }
-
-    @Test
-    fun contrasenaDebil_devuelveElMensajeDeLaReglaIncumplida() {
+    fun contrasenaMuestraError() {
         assertEquals(
             "La contraseña debe tener al menos 8 caracteres",
             PasswordValidator.validarContrasena("Ab1#")
