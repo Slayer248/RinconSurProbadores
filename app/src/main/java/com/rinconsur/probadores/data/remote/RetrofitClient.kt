@@ -10,7 +10,7 @@ object RetrofitClient {
      * - Emulador en el mismo PC que el backend: "http://10.0.2.2:8090/"
      * - Otro PC o celular en la misma red: "http://<IP del PC del backend>:8090/"
      */
-    private const val BASE_URL = "http://10.0.2.2:8090/"
+    private const val BASE_URL = "http://192.168.1.86:8090/"
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
