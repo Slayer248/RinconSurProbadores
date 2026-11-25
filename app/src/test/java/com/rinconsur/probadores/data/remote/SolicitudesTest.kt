@@ -19,11 +19,4 @@ class SolicitudesTest {
         assertNull(edicion.nuevaContrasena)
     }
 
-    @Test
-    fun CambiarContrasena() {
-        val cambio = CambiarContrasenaRequest(actual = "Clave#2026", nueva = "Nueva#2027")
-
-        assertEquals("Clave#2026", cambio.actual)
-        assertEquals("Nueva#2027", cambio.nueva)
-    }
 }

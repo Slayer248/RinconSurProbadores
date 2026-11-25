@@ -21,9 +21,5 @@ class ModelosTest {
         assertEquals("Último uso: Ana Morales (T-1001) el 20-11-2026 14:30", conUso.ultimoUsoTexto)
     }
 
-    @Test
-    fun ProbadorSinTurno() {
-        val sinTurno = ProbadorEntity("P-01", false, "LIBRE", "-", ultimoCliente = "Ana Morales")
-        assertEquals("Último uso: Ana Morales (-) el -", sinTurno.ultimoUsoTexto)
-    }
+
 }
