@@ -9,19 +9,45 @@ import com.rinconsur.probadores.data.local.entities.TurnoEntity
 import com.rinconsur.probadores.data.local.entities.UsuarioEntity
 import com.rinconsur.probadores.data.repository.*
 import com.rinconsur.probadores.utils.SessionManager
+import com.rinconsur.probadores.utils.SugerenciaClima
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class LoginViewModel @JvmOverloads constructor(
     application: Application,
     private val usuarioRepository: UsuarioRepository = UsuarioRepositoryImpl(),
-    private val turnoRepository: TurnoRepository = TurnoRepositoryImpl()
+    private val turnoRepository: TurnoRepository = TurnoRepositoryImpl(),
+    private val climaRepository: ClimaRepository = ClimaRepositoryImpl()
 ) : AndroidViewModel(application) {
 
     private val _turnosEnEspera = MutableLiveData<List<TurnoEntity>>(emptyList())
     val turnosEnEsperaLiveData: LiveData<List<TurnoEntity>> = _turnosEnEspera
 
+    // Texto de la tarjeta del clima (datos de la API externa Open-Meteo)
+    private val _textoClima = MutableLiveData("Consultando el clima...")
+    val textoClimaLiveData: LiveData<String> = _textoClima
+
     init {
         refrescarTurnos()
+        iniciarRefrescoClima()
+    }
+
+    // Va separado de la fila: el clima cambia poco y su falla no debe afectar a los turnos
+    private fun iniciarRefrescoClima() {
+        viewModelScope.launch {
+            while (isActive) {
+                val temperatura = climaRepository.obtenerTemperatura()
+                _textoClima.value = if (temperatura == null) {
+                    "Clima no disponible"
+                } else {
+                    "Santiago: ${temperatura.roundToInt()} °C. ${SugerenciaClima.sugerir(temperatura)}"
+                }
+                // Si falló se reintenta en 1 minuto; si respondió, se actualiza cada 10
+                delay(if (temperatura == null) 60_000L else 600_000L)
+            }
+        }
     }
 
     fun refrescarTurnos() {

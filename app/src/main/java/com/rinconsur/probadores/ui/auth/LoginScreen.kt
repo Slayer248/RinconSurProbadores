@@ -49,6 +49,7 @@ fun LoginScreen(
     val context = LocalContext.current
 
     val turnosEnEspera by viewModel.turnosEnEsperaLiveData.observeAsState(initial = emptyList())
+    val textoClima by viewModel.textoClimaLiveData.observeAsState(initial = "Consultando el clima...")
 
     val ultimoInvitadoRecordado = remember(context) {
         SessionManager.obtenerUltimoInvitado(context)
@@ -300,6 +301,18 @@ fun LoginScreen(
                         ) {
                             Text("Ingresar como Cliente")
                         }
+                    }
+                }
+
+                // Tarjeta del clima (API externa Open-Meteo): solo en la pestaña Clientes
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(text = textoClima, fontSize = 14.sp)
+                        Text(
+                            text = "Datos del clima: Open-Meteo.com",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             } else {

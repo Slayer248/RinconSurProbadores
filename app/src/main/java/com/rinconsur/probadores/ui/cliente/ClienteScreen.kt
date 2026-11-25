@@ -96,13 +96,19 @@ fun ClienteScreen(
         }
     }
 
-    // Efecto: Notificar y vibrar cuando el turno del cliente pasa a posición #1
+    // Efecto: Notificar y vibrar cuando el turno del cliente llega a la posición #5, #3 o #1
     LaunchedEffect(posicionMiTurno) {
-        if (posicionMiTurno == 1 && miTurnoActivo != null) {
+        if (posicionMiTurno in listOf(1, 3, 5) && miTurnoActivo != null) {
+            val esElSiguiente = posicionMiTurno == 1
+            val consejo = if (esElSiguiente) {
+                "¡Prepárate para ingresar al probador!"
+            } else {
+                "Quedan ${posicionMiTurno - 1} personas antes que tú."
+            }
             NotificationHelper.enviarNotificacion(
                 context = context,
-                titulo = "¡Tu turno está próximo!",
-                mensaje = "Estás en la posición #1 de la fila con el turno ${miTurnoActivo.numeroTurno}. ¡Prepárate para ingresar al probador!"
+                titulo = if (esElSiguiente) "¡Tu turno está próximo!" else "Tu turno se acerca",
+                mensaje = "Estás en la posición #$posicionMiTurno de la fila con el turno ${miTurnoActivo.numeroTurno}. $consejo"
             )
         }
     }
